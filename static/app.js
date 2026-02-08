@@ -150,7 +150,14 @@ function loadSettings() {
             machineSelect.value = settings.machineId;
         }
         document.getElementById('material').value = settings.material || DEFAULT_SETTINGS.material;
-        document.getElementById('thickness').value = settings.thickness || DEFAULT_SETTINGS.thickness;
+
+        // Only load thickness from localStorage if NOT auto-detected from CAD
+        const detectedThickness = window.ONSHAPE_DATA && window.ONSHAPE_DATA.detectedThickness;
+        if (!detectedThickness) {
+            document.getElementById('thickness').value = settings.thickness || DEFAULT_SETTINGS.thickness;
+        }
+        // If detected thickness exists, the HTML already has the correct value - don't override it
+
         document.getElementById('tabSpacing').value = settings.tabSpacing || DEFAULT_SETTINGS.tabSpacing;
         document.getElementById('tubeHeight').value = settings.tubeHeight || DEFAULT_SETTINGS.tubeHeight;
         document.getElementById('squareEnd').checked = settings.squareEnd !== undefined ? settings.squareEnd : DEFAULT_SETTINGS.squareEnd;
