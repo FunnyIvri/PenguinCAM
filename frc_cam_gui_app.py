@@ -1538,9 +1538,6 @@ def onshape_import():
                 log("⚠️  Could not find reference origin, using default")
                 reference_origin = {'x': 0, 'y': 0, 'z': 0}
 
-            log(f"Reference normal: {face_normal}")
-            log(f"Reference origin: {reference_origin}")
-
             # Export multi-layer DXF
             result = client.export_multilayer_dxf(
                 document_id, workspace_id, element_id,

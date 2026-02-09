@@ -982,14 +982,6 @@ class OnshapeClient:
                         METERS_TO_INCHES = 39.3701
                         signed_distance = signed_distance_m * METERS_TO_INCHES
 
-                        # DEBUG: Log coordinate system info for first few faces
-                        if len(parallel_faces) < 3:
-                            log(f"    DEBUG: ref_normal=({ref_nx:.4f}, {ref_ny:.4f}, {ref_nz:.4f})")
-                            log(f"    DEBUG: ref_origin=({ref_ox:.6f}, {ref_oy:.6f}, {ref_oz:.6f}) m")
-                            log(f"    DEBUG: face_origin=({ox:.6f}, {oy:.6f}, {oz:.6f}) m")
-                            log(f"    DEBUG: delta=({dx:.6f}, {dy:.6f}, {dz:.6f}) m")
-                            log(f"    DEBUG: signed_distance={signed_distance:.4f}\" (from {signed_distance_m:.6f} m)")
-
                         # Convert area from square meters to square inches
                         area_sq_in = face['area'] * (METERS_TO_INCHES ** 2)
 
@@ -1161,6 +1153,17 @@ class OnshapeClient:
         log(f"Reference normal: {reference_normal}")
         log(f"Reference origin: {reference_origin}")
 
+        # CRITICAL: Check reference normal direction
+        # If normal points downward (z < 0), we need to flip all signed distances
+        # This happens when user selects a bottom face looking up at it
+        ref_nz = reference_normal.get('z', 1.0)
+        flip_depths = ref_nz < 0
+        if flip_depths:
+            log(f"⚠️  Reference normal points DOWNWARD (z={ref_nz:.4f})")
+            log(f"   Will negate all depth values to correct coordinate system")
+        else:
+            log(f"✅ Reference normal points UPWARD (z={ref_nz:.4f})")
+
         # Find all parallel faces grouped by depth
         # Use tight tolerance (1 mil) to avoid grouping distinct layers
         depth_bins = self.find_parallel_faces_by_depth(
@@ -1173,6 +1176,16 @@ class OnshapeClient:
         if not depth_bins:
             log("No parallel faces found")
             return None
+
+        # Flip depths if reference normal pointed downward
+        if flip_depths:
+            log("\n🔄 Negating all depth values (reference normal was downward)")
+            corrected_bins = {}
+            for depth, faces in depth_bins.items():
+                corrected_depth = -depth
+                log(f"   {depth:+.4f}\" → {corrected_depth:+.4f}\"")
+                corrected_bins[corrected_depth] = faces
+            depth_bins = corrected_bins
 
         # Export each depth group
         dxf_contents = {}
