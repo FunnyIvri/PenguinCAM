@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roadmap - PenguinCAM Documentation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="logo">
+            <span class="accent">Penguin</span>CAM
+        </div>
+        <div class="nav-section">Documentation</div>
+        <a href="index.html">Introduction</a>
+        <a href="usage.html">How to Use</a>
+        <a href="configuration.html">Configuration</a>
+        <a href="roadmap.html" class="active">Roadmap</a>
+        <div class="nav-divider"></div>
+        <a href="/" class="nav-external">← Back to App</a>
+    </nav>
+
+    <main class="content">
+        <h1>PenguinCAM Roadmap</h1>
+
+        <p class="lead">
+            Development priorities and future enhancements for PenguinCAM.
+        </p>
+
+        <div class="info-box">
+            <div class="info-icon">✅</div>
+            <div>
+                <strong>Current Status:</strong> PenguinCAM is deployed and production-ready at
+                <a href="https://penguincam.popcornpenguins.com">penguincam.popcornpenguins.com</a>
+            </div>
+        </div>
+
+        <h2>Current Features</h2>
+
+        <p>
+            PenguinCAM is ready for real-world FRC use with these features:
+        </p>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">✅</div>
+                <h3>Onshape Integration</h3>
+                <p>One-click export from Onshape with OAuth authentication</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">✅</div>
+                <h3>Automatic Detection</h3>
+                <p>Top face detection, hole identification, and smart feature recognition</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">✅</div>
+                <h3>Part Orientation</h3>
+                <p>Rotate in 90° increments with fixed bottom-left origin</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">✅</div>
+                <h3>3D Visualization</h3>
+                <p>Interactive preview with toolpath scrubber and tool animation</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">✅</div>
+                <h3>Multi-Layer Support</h3>
+                <p>2.5D machining with grooves, pockets, and countersinks</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">✅</div>
+                <h3>Tube Machining</h3>
+                <p>Square ends and mirror-image patterns for aluminum tube</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">✅</div>
+                <h3>Tool Compensation</h3>
+                <p>Automatic offset for perimeters, pockets, and holes</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">✅</div>
+                <h3>Smart Tabs</h3>
+                <p>Automatic tab placement and removal for secure parts</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">✅</div>
+                <h3>Google Drive</h3>
+                <p>Direct upload to team shared drives</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">✅</div>
+                <h3>Multi-Team</h3>
+                <p>Team-specific configurations via YAML files</p>
+            </div>
+        </div>
+
+        <h2>Future Enhancements</h2>
+
+        <p>
+            Planned features in no particular order. Priority and effort are approximate.
+        </p>
+
+        <div class="step-list">
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Multiple Parts Per Job</h3>
+                    <p><strong>Priority:</strong> Medium | <strong>Effort:</strong> Medium-High</p>
+                    <p>
+                        Layout multiple instances of the same part on a single piece of stock, or
+                        combine different parts in one cutting job. Would optimize material usage
+                        and reduce setup time.
+                    </p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Per-Team Branding</h3>
+                    <p><strong>Priority:</strong> Low | <strong>Effort:</strong> Medium</p>
+                    <p>
+                        Customize the UI with team colors, logos, and names from the config file.
+                        Would make PenguinCAM feel more like "your" tool.
+                    </p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Additional Cloud Storage</h3>
+                    <p><strong>Priority:</strong> Low | <strong>Effort:</strong> Medium</p>
+                    <p>
+                        Support for Dropbox, OneDrive, or other cloud storage services beyond Google Drive.
+                        Would benefit teams not using Google Workspace.
+                    </p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3>G41/G42 Tool Compensation</h3>
+                    <p><strong>Priority:</strong> Low | <strong>Effort:</strong> Medium</p>
+                    <p>
+                        Use controller-based tool compensation instead of pre-compensated paths.
+                        Would allow more precise finished products, especially for bearing holes
+                        where 1.125" often ends up too small.
+                    </p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <h3>Enhanced 2.5D Features</h3>
+                    <p><strong>Priority:</strong> Medium | <strong>Effort:</strong> High</p>
+                    <p>
+                        <strong>Status: Implemented!</strong> Multi-layer DXF export for parts with
+                        partial-depth pockets, grooves, and countersinks. Uses face analysis in Onshape
+                        to automatically detect and export multiple depth layers.
+                    </p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">6</div>
+                <div class="step-content">
+                    <h3>Asymmetric Tube Patterns</h3>
+                    <p><strong>Priority:</strong> Medium | <strong>Effort:</strong> High</p>
+                    <p>
+                        Support tubing where opposite faces aren't the same. Many teams do tube designs
+                        with larger holes on one side to support access to bolt heads.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <h2>Ideas for Consideration</h2>
+
+        <p>
+            Not committed to the roadmap yet, but worth exploring:
+        </p>
+
+        <ul>
+            <li>Batch processing multiple DXFs in one job</li>
+            <li>G-code optimization for shorter tool paths</li>
+            <li>Export simulation as video or animated GIF</li>
+            <li>Integration with other CAD platforms (Fusion 360, Inventor)</li>
+            <li>Library of CNC machines with pre-configured settings</li>
+            <li>Custom tab placement (manual positioning)</li>
+            <li>Tool library management</li>
+            <li>Estimated cycle time improvements</li>
+            <li>Adaptive toolpath strategies</li>
+        </ul>
+
+        <h2>Contributing</h2>
+
+        <p>
+            PenguinCAM was built for FRC Team 6238 but is open for other teams to use and improve!
+        </p>
+
+        <p>
+            If you're interested in contributing:
+        </p>
+
+        <ol>
+            <li>Open an issue on GitHub to discuss your idea</li>
+            <li>Fork the repository and make your changes</li>
+            <li>Submit a pull request with tests and documentation</li>
+        </ol>
+
+        <p>
+            Repository: <a href="https://github.com/6238/PenguinCAM" target="_blank">github.com/6238/PenguinCAM</a>
+        </p>
+
+        <h2>Support</h2>
+
+        <p>
+            Questions about features or interested in contributing?<br>
+            Contact: <a href="mailto:penguincam@popcornpenguins.com">penguincam@popcornpenguins.com</a>
+        </p>
+
+        <footer>
+            <p>Last Updated: January 2026</p>
+            <p>Maintained by FRC Team 6238 Popcorn Penguins</p>
+        </footer>
+    </main>
+</body>
+</html>

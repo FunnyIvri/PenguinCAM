@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PenguinCAM Documentation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="logo">
+            <span class="accent">Penguin</span>CAM
+        </div>
+        <div class="nav-section">Documentation</div>
+        <a href="index.html" class="active">Introduction</a>
+        <a href="usage.html">How to Use</a>
+        <a href="configuration.html">Configuration</a>
+        <a href="roadmap.html">Roadmap</a>
+        <div class="nav-divider"></div>
+        <a href="/" class="nav-external">← Back to App</a>
+    </nav>
+
+    <main class="content">
+        <h1>Welcome to PenguinCAM</h1>
+
+        <p class="lead">
+            PenguinCAM is a CAM post-processor that generates CNC G-code from DXF files exported from Onshape.
+            Built for <strong>FRC Team 6238 Popcorn Penguins</strong>, it automates the CAD-to-CNC workflow for flat plates without requiring CAM software.
+        </p>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🔗</div>
+                <h3>One-Click Integration</h3>
+                <p>Export parts directly from Onshape with a single click. No manual file export/import handling required.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🎯</div>
+                <h3>Smart Detection</h3>
+                <p>Automatically detects holes, pockets, and perimeters. Configurable tab strategies: auto-place and remove, or pause for fixturing through holes.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📐</div>
+                <h3>Interactive Preview</h3>
+                <p>Visualize your toolpaths in 3D before cutting. Rotate, scrub through moves, and verify setup.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">⚙️</div>
+                <h3>Team Customization</h3>
+                <p>Configure machine dimensions, materials, and cutting parameters for your specific CNC setup.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🔧</div>
+                <h3>Multi-Layer Support</h3>
+                <p>Create 2.5D parts with grooves, pockets, and countersinks at multiple depths.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📦</div>
+                <h3>Tube Machining</h3>
+                <p>Special mode for cutting patterns on aluminum tubing, with automatic end squaring and mirroring.</p>
+            </div>
+        </div>
+
+        <h2>Quick Start</h2>
+
+        <div class="step-list">
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Install Onshape App</h3>
+                    <p>
+                        Add PenguinCAM to your Onshape account from the
+                        <a href="https://cad.onshape.com/appstore/apps/CAM/6939eaf505d3df4aeac54600" target="_blank">Onshape App Store</a>
+                    </p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Select a Face</h3>
+                    <p>In Onshape, open the PenguinCAM panel, then select the top face of your part and click "Send to PenguinCAM"</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Generate G-code</h3>
+                    <p>Review parameters, preview the toolpath, and download your G-code program</p>
+                </div>
+            </div>
+        </div>
+
+        <h2>Hosted Service</h2>
+
+        <p>
+            PenguinCAM is hosted at <a href="https://penguincam.popcornpenguins.com">penguincam.popcornpenguins.com</a>
+            and is <strong>free to use</strong> for any FRC team. We handle the infrastructure, authentication, and updates.
+        </p>
+
+        <div class="info-box">
+            <div class="info-icon">ℹ️</div>
+            <div>
+                <strong>Multi-Team Support:</strong> Other teams can use the hosted service by uploading a
+                <code>PenguinCAM-config.yaml</code> file to customize settings for their CNC machine.
+                See <a href="configuration.html">Configuration</a> for details.
+            </div>
+        </div>
+
+        <h2>Support & Contact</h2>
+
+        <p>
+            Questions or issues? Contact: <a href="mailto:penguincam@popcornpenguins.com">penguincam@popcornpenguins.com</a>
+        </p>
+
+        <p>
+            Report bugs or request features on GitHub:
+            <a href="https://github.com/6238/PenguinCAM/issues" target="_blank">github.com/6238/PenguinCAM</a>
+        </p>
+
+        <footer>
+            <p>PenguinCAM is maintained by FRC Team 6238 Popcorn Penguins</p>
+            <p>Last Updated: January 2026</p>
+        </footer>
+    </main>
+</body>
+</html>

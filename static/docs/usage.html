@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use - PenguinCAM Documentation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="logo">
+            <span class="accent">Penguin</span>CAM
+        </div>
+        <div class="nav-section">Documentation</div>
+        <a href="index.html">Introduction</a>
+        <a href="usage.html" class="active">How to Use</a>
+        <a href="configuration.html">Configuration</a>
+        <a href="roadmap.html">Roadmap</a>
+        <div class="nav-divider"></div>
+        <a href="/" class="nav-external">← Back to App</a>
+    </nav>
+
+    <main class="content">
+        <h1>How to Use PenguinCAM</h1>
+
+        <p class="lead">
+            PenguinCAM supports two workflows: direct import from Onshape (recommended), or manual DXF file upload.
+        </p>
+
+        <h2>Onshape Workflow (Recommended)</h2>
+
+        <h3>1. Install the Onshape App</h3>
+        <p>
+            Add PenguinCAM to your Onshape account from the
+            <a href="https://cad.onshape.com/appstore/apps/CAM/6939eaf505d3df4aeac54600" target="_blank">Onshape App Store</a>.
+            This adds a PenguinCAM panel to your Onshape workspace.
+        </p>
+
+        <h3>2. Design Your Part</h3>
+        <p>
+            Create your part in Onshape as a flat plate or profile to be cut from sheet stock.
+            PenguinCAM works best with:
+        </p>
+        <ul>
+            <li>Flat parts designed in a single plane</li>
+            <li>Through holes and pockets</li>
+            <li>Parts with a clear top and bottom face</li>
+        </ul>
+
+        <h3>3. Select Mode</h3>
+        <p>
+            In the PenguinCAM panel, choose between:
+        </p>
+        <ul>
+            <li><strong>Multi-layer (2.5D) mode:</strong> For parts with grooves, pockets, or countersinks at multiple depths. Stock thickness must match your CAD part thickness.</li>
+            <li><strong>2D mode:</strong> For simple flat patterns. Any stock thickness works - you're just cutting the perimeter and through-features.</li>
+        </ul>
+
+        <h3>4. Open PenguinCAM Panel and Select a Face</h3>
+        <p>
+            Open the PenguinCAM panel in Onshape, then click on a face in your model:
+        </p>
+        <ul>
+            <li><strong>For 2.5D mode:</strong> Select a face at the <strong>top-most layer</strong> of your part</li>
+            <li><strong>For 2D mode:</strong> Select the <strong>top face</strong> of your part</li>
+        </ul>
+
+        <div class="warning-box info-box">
+            <div class="info-icon">⚠️</div>
+            <div>
+                <strong>Tip:</strong> If you have drawings visible in your part studio, hide them first.
+                Face selections on drawings won't work - you need to select the actual solid body face.
+            </div>
+        </div>
+
+        <h3>5. Send to PenguinCAM</h3>
+        <p>
+            Click "Send to PenguinCAM" in the panel. This will:
+        </p>
+        <ul>
+            <li>Export your part geometry from Onshape</li>
+            <li>Open PenguinCAM with your part pre-loaded</li>
+            <li>Auto-detect part thickness (for 2.5D mode)</li>
+        </ul>
+
+        <h3>6. Configure Parameters</h3>
+        <p>
+            Review and adjust the cutting parameters:
+        </p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Parameter</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Machine</strong></td>
+                    <td>Select which CNC machine to use (if you have multiple configured)</td>
+                </tr>
+                <tr>
+                    <td><strong>Material Type</strong></td>
+                    <td>Choose the material preset (plywood, aluminum, etc.). Sets feed rates and depth of cut.</td>
+                </tr>
+                <tr>
+                    <td><strong>Material Thickness</strong></td>
+                    <td>Stock thickness in inches. Auto-detected for 2.5D parts from CAD.</td>
+                </tr>
+                <tr>
+                    <td><strong>Tool Diameter</strong></td>
+                    <td>End mill diameter in inches (e.g., 0.157 for 4mm)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="info-box">
+            <div class="info-icon">ℹ️</div>
+            <div>
+                <strong>Multi-layer parts:</strong> The auto-detected thickness should match your CAD part.
+                Changing this value may cause incorrect cut depths. If the detected value is wrong,
+                check your CAD model - the part might have unexpected faces at different depths.
+            </div>
+        </div>
+
+        <h3>7. Orient Your Part (2D Setup View)</h3>
+        <p>
+            Before generating G-code, you'll see your DXF pattern in the 2D setup view:
+        </p>
+        <ul>
+            <li><strong>Rotate:</strong> Click "Rotate 90° CW" to change orientation. The origin (0,0) stays at the bottom-left corner.</li>
+            <li><strong>Origin:</strong> The white dot shows where (0,0) will be on your CNC machine. This is always the bottom-left corner of your part's bounding box.</li>
+        </ul>
+
+        <p>
+            Orient your part to match how you'll clamp the stock on your machine table.
+        </p>
+
+        <h3>8. Generate G-code</h3>
+        <p>
+            Click "Generate Program" to create the CNC toolpaths. PenguinCAM will:
+        </p>
+        <ul>
+            <li>Detect holes and mill them as circular pockets</li>
+            <li>Detect larger pockets and clear them with a spiral pattern</li>
+            <li>Cut the perimeter with tabs to secure the part (see tab strategies below)</li>
+            <li>Calculate tool compensation for accurate dimensions</li>
+        </ul>
+
+        <h3>Tab Strategies</h3>
+        <p>
+            PenguinCAM offers two strategies for securing parts during perimeter cutting:
+        </p>
+        <ul>
+            <li>
+                <strong>Automatic tabs (default):</strong> Tabs are placed automatically along the perimeter at regular intervals.
+                The program cuts the perimeter leaving tabs intact, then returns at the end to remove all tabs.
+                This is the safest option and requires no additional fixturing.
+            </li>
+            <li>
+                <strong>Pause for fixturing:</strong> No tabs are placed on the perimeter. Instead, the program pauses
+                (M0) before cutting the perimeter, allowing you to fixture the part through recently-milled holes using
+                screws or clamps. This provides a cleaner perimeter edge but requires manual intervention.
+                Configure this option in your team's config file.
+            </li>
+        </ul>
+
+        <h3>9. Preview Toolpaths</h3>
+        <p>
+            Switch to "Preview G-code" mode to see the 3D visualization:
+        </p>
+        <ul>
+            <li><strong>Stock box (gray):</strong> Shows your material dimensions</li>
+            <li><strong>DXF overlay (white):</strong> Shows the part outline on top of the stock</li>
+            <li><strong>Toolpaths (orange/green):</strong> Shows where the tool will move</li>
+            <li><strong>Scrubber:</strong> Drag to step through each move and watch the tool animate</li>
+        </ul>
+
+        <p>
+            Use the mouse to rotate the view, scroll to zoom, and verify everything looks correct.
+        </p>
+
+        <h3>10. Download Program</h3>
+        <p>
+            Click "Download Program" to save the G-code (.nc file) to your computer.
+            If Google Drive is configured, you can also save directly to your team's shared drive.
+        </p>
+
+        <h2>Manual File Upload</h2>
+
+        <p>
+            For users who prefer to work with manually exported files or don't use Onshape,
+            PenguinCAM supports direct DXF file upload:
+        </p>
+
+        <ol>
+            <li>Export a DXF file from your CAD software (top view, looking down)</li>
+            <li>Open <a href="https://penguincam.popcornpenguins.com">penguincam.popcornpenguins.com</a></li>
+            <li>Drag and drop your DXF file into the upload area</li>
+            <li>Configure parameters and generate G-code as described above</li>
+        </ol>
+
+        <div class="info-box">
+            <div class="info-icon">ℹ️</div>
+            <div>
+                <strong>Note:</strong> Manual file upload is limited to 2D parts only.
+                Multi-layer (2.5D) machining requires the Onshape integration.
+            </div>
+        </div>
+
+        <h2>Aluminum Tube Mode</h2>
+
+        <p>
+            For machining patterns on aluminum tubing:
+        </p>
+
+        <ol>
+            <li>Select "Aluminum Tube" as the material type</li>
+            <li>Enter the tube height (distance from bottom to top in the CNC jig)</li>
+            <li>Enable "Square the zero end" to face off the first end</li>
+            <li>Enable "Machine far end to length" to cut the tube to size</li>
+        </ol>
+
+        <p>
+            Tube mode will:
+        </p>
+        <ul>
+            <li>Face half the tube circumference</li>
+            <li>Prompt you to flip the tube 180°</li>
+            <li>Face the other half to complete the pattern</li>
+        </ul>
+
+        <h2>Understanding the Output</h2>
+
+        <h3>G-code Header Comments</h3>
+        <p>
+            Every generated program starts with setup instructions:
+        </p>
+        <ul>
+            <li>Stock size required</li>
+            <li>Tool diameter used</li>
+            <li>Material settings</li>
+            <li>Origin location (bottom-left corner, Z=0 at sacrifice board)</li>
+        </ul>
+
+        <h3>Coordinate System</h3>
+        <p>
+            PenguinCAM uses this coordinate system:
+        </p>
+        <ul>
+            <li><strong>X-axis:</strong> Increases to the right (looking at the machine)</li>
+            <li><strong>Y-axis:</strong> Increases away from you</li>
+            <li><strong>Z-axis:</strong> Z=0 at the sacrifice board, positive is UP</li>
+            <li><strong>Origin (0,0):</strong> Bottom-left corner of your part's bounding box</li>
+        </ul>
+
+        <h3>Work Coordinate System</h3>
+        <p>
+            Programs use <strong>G54</strong> work coordinates. Set your work zero on the CNC at:
+        </p>
+        <ul>
+            <li>X=0, Y=0 at the bottom-left corner of the stock</li>
+            <li>Z=0 at the top of the sacrifice board (not the stock top)</li>
+        </ul>
+
+        <h2>Troubleshooting</h2>
+
+        <h3>Part doesn't fit on stock</h3>
+        <p>
+            Check the "Stock Size" display after generating G-code. If it's larger than your machine,
+            you'll need to either:
+        </p>
+        <ul>
+            <li>Scale down your part in CAD</li>
+            <li>Use a larger machine (configure in your team config file)</li>
+            <li>Split the part into smaller pieces</li>
+        </ul>
+
+        <h3>Holes aren't round</h3>
+        <p>
+            Make sure your tool diameter is smaller than the hole. PenguinCAM will warn you about
+            unmillable features if the tool is too large.
+        </p>
+
+        <h3>Tabs are in bad locations</h3>
+        <p>
+            Tabs are placed automatically based on perimeter length. You cannot manually position tabs,
+            but they're designed to be easily removed with a file or grinder after cutting. Alternatively,
+            configure the "pause for fixturing" option in your team config to skip tabs entirely and
+            fixture through milled holes instead.
+        </p>
+
+        <h3>Multi-layer part has incorrect depths</h3>
+        <p>
+            Verify the auto-detected thickness matches your CAD part. If wrong:
+        </p>
+        <ul>
+            <li>Check for extra faces at unexpected depths in your CAD</li>
+            <li>Make sure you selected a face on the top layer</li>
+            <li>Hide any construction geometry or drawings before exporting</li>
+        </ul>
+
+        <footer>
+            <p>Still have questions? Contact: <a href="mailto:penguincam@popcornpenguins.com">penguincam@popcornpenguins.com</a></p>
+        </footer>
+    </main>
+</body>
+</html>

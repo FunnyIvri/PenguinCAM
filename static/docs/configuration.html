@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration - PenguinCAM Documentation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="logo">
+            <span class="accent">Penguin</span>CAM
+        </div>
+        <div class="nav-section">Documentation</div>
+        <a href="index.html">Introduction</a>
+        <a href="usage.html">How to Use</a>
+        <a href="configuration.html" class="active">Configuration</a>
+        <a href="roadmap.html">Roadmap</a>
+        <div class="nav-divider"></div>
+        <a href="/" class="nav-external">← Back to App</a>
+    </nav>
+
+    <main class="content">
+        <h1>Team Configuration</h1>
+
+        <p class="lead">
+            Customize PenguinCAM for your team's specific CNC machines by uploading a
+            <code>PenguinCAM-config.yaml</code> file to your Onshape documents.
+        </p>
+
+        <div class="info-box">
+            <div class="info-icon">ℹ️</div>
+            <div>
+                <strong>Without a config file:</strong> PenguinCAM uses Team 6238's default settings
+                (24"×24" machine, conservative feed rates). These work but may not be optimal for your machine.
+            </div>
+        </div>
+
+        <h2>Quick Setup</h2>
+
+        <div class="step-list">
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Download Template</h3>
+                    <p>
+                        <a href="PenguinCAM-config-template.yaml" download>Download PenguinCAM-config-template.yaml</a>
+                    </p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Edit for Your Machine</h3>
+                    <p>
+                        Open in a text editor and customize machine dimensions, feed rates, and materials.
+                        See detailed configuration options below.
+                    </p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Upload to Onshape</h3>
+                    <p>
+                        In Onshape, create a new document or use an existing one. Click the + icon and upload your
+                        config file. Name it exactly <code>PenguinCAM-config.yaml</code> (case sensitive).
+                    </p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3>Share with Your Team and PenguinCAM</h3>
+                    <p>
+                        Share the Onshape document with:
+                    </p>
+                    <ul>
+                        <li><strong>Your team members or company</strong> - so everyone can access the settings</li>
+                        <li><strong>The PenguinCAM app</strong> - in the Onshape sharing dialog, use the "Share with applications" tab
+                        and grant access to PenguinCAM</li>
+                    </ul>
+                    <p>
+                        Everyone who authenticates with PenguinCAM from your organization will use your custom settings.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <h2>Configuration Structure</h2>
+
+        <h3>Team Information</h3>
+        <p>
+            Identify your team. This appears in logs and helps us provide support:
+        </p>
+        <pre><code>team:
+  number: 1234
+  name: "Your Team Name"</code></pre>
+
+        <h3>Machine Definitions</h3>
+        <p>
+            Define one or more CNC machines. If you have multiple machines (e.g., a smaller one for prototyping),
+            you can configure each with different settings:
+        </p>
+
+        <pre><code>machines:
+  main_cnc:
+    name: "Omio X8-2200"
+
+    machine:
+      dimensions:
+        x_max: 22.2    # Work envelope in inches
+        y_max: 30.3
+        z_max: 3.3</code></pre>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Setting</th>
+                    <th>Description</th>
+                    <th>Default</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>x_max</code></td>
+                    <td>Maximum X travel (inches)</td>
+                    <td>48.0</td>
+                </tr>
+                <tr>
+                    <td><code>y_max</code></td>
+                    <td>Maximum Y travel (inches)</td>
+                    <td>96.0</td>
+                </tr>
+                <tr>
+                    <td><code>z_max</code></td>
+                    <td>Maximum Z travel (inches)</td>
+                    <td>3.3</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Default Tool</h3>
+        <p>
+            Set the default tool diameter that appears when loading a new part:
+        </p>
+        <pre><code>default_tool:
+  diameter: 0.157    # 4mm end mill</code></pre>
+
+        <h3>Z-Axis Reference System</h3>
+        <p>
+            Configure how deep to cut and safe heights for tool changes:
+        </p>
+        <pre><code>z_reference:
+  sacrifice_board_depth: 0.008    # Cut 0.008" into sacrifice board
+  safe_height: 1.5                # Rapid height for tool changes
+  clearance_height: 0.5           # Clearance above stock</code></pre>
+
+        <h3>Material Presets</h3>
+        <p>
+            Define materials with appropriate feed rates and speeds for your machine's rigidity:
+        </p>
+
+        <pre><code>materials:
+  plywood:
+    name: "Plywood"
+    feed_rate: 60.0              # Cutting feed rate (IPM)
+    ramp_feed_rate: 40.0         # Feed rate for ramping into material
+    plunge_rate: 15.0            # Plunge feed rate
+    ramp_start_clearance: 0.05   # Clearance before ramping
+    ramp_angle: 4.0              # Ramp angle (degrees)
+    stepover_fraction: 0.25      # Stepover as fraction of tool diameter</code></pre>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Material</th>
+                    <th>Typical Feed Rate</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Plywood</td>
+                    <td>50-80 IPM</td>
+                    <td>Fast cutting, watch for tear-out on edges</td>
+                </tr>
+                <tr>
+                    <td>Aluminum</td>
+                    <td>40-60 IPM</td>
+                    <td>Use flood coolant if available</td>
+                </tr>
+                <tr>
+                    <td>Polycarbonate</td>
+                    <td>30-50 IPM</td>
+                    <td>Slower speeds to avoid melting</td>
+                </tr>
+                <tr>
+                    <td>HDPE</td>
+                    <td>40-60 IPM</td>
+                    <td>Sharp tools required to avoid smearing</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="warning-box info-box">
+            <div class="info-icon">⚠️</div>
+            <div>
+                <strong>Important:</strong> Start with conservative feed rates and increase gradually.
+                Pushing too hard can damage tools or your machine. Always run test cuts on scrap material first.
+            </div>
+        </div>
+
+        <h3>Tab Settings</h3>
+        <p>
+            Configure how parts are secured during perimeter cutting. Two strategies are available:
+        </p>
+        <pre><code>tabs:
+  enabled: true     # Use automatic tabs (they're removed at the end)
+  width: 0.25       # Tab width (inches)
+  height: 0.15      # How much material left in tab
+
+fixturing:
+  pause_before_perimeter: false  # If true, skip tabs and pause for manual fixturing</code></pre>
+        <p>
+            Choose one strategy:
+        </p>
+        <ul>
+            <li><strong>Automatic tabs (<code>enabled: true</code>):</strong> Tabs are placed automatically and removed as the final step. No manual intervention needed.</li>
+            <li><strong>Pause for fixturing (<code>pause_before_perimeter: true</code>):</strong> No tabs are placed. Program pauses (M0) before perimeter cut to allow fixturing through milled holes.</li>
+        </ul>
+
+        <h2>Multiple Machines</h2>
+
+        <p>
+            If your team has multiple CNCs, define each in the config:
+        </p>
+
+        <pre><code>version: 2
+default_machine: main_cnc
+
+machines:
+  main_cnc:
+    name: "Main CNC (Omio X8)"
+    machine:
+      dimensions:
+        x_max: 22.2
+        y_max: 30.3
+    materials:
+      plywood:
+        feed_rate: 60.0
+
+  prototype_cnc:
+    name: "Prototype CNC (Smaller)"
+    machine:
+      dimensions:
+        x_max: 12.0
+        y_max: 12.0
+    materials:
+      plywood:
+        feed_rate: 40.0    # Slower for less rigid machine</code></pre>
+
+        <p>
+            Users can select which machine to use from the UI dropdown (if more than one is configured).
+        </p>
+
+        <h2>Google Drive Integration</h2>
+
+        <p>
+            To enable automatic uploads to Google Drive, configure your Drive folder ID:
+        </p>
+
+        <pre><code>google_drive:
+  enabled: true
+  folder_id: "your-folder-id-here"
+  folder_name: "CNC Programs"</code></pre>
+
+        <p>
+            To find your folder ID:
+        </p>
+        <ol>
+            <li>Open Google Drive and navigate to the folder where you want programs saved</li>
+            <li>Copy the folder ID from the URL:<br>
+                <code>https://drive.google.com/drive/folders/<strong>ABC123xyz</strong></code>
+            </li>
+            <li>Paste the ID into your config file</li>
+        </ol>
+
+        <div class="info-box">
+            <div class="info-icon">ℹ️</div>
+            <div>
+                <strong>Note:</strong> Drive integration requires your team to be in a Google Workspace organization.
+                Personal Gmail accounts are not currently supported for Drive uploads.
+            </div>
+        </div>
+
+        <h2>Advanced Settings</h2>
+
+        <h3>Hole Detection</h3>
+        <p>
+            Control how PenguinCAM detects and machines holes:
+        </p>
+        <pre><code>holes:
+  detection_tolerance: 0.0001         # Circularity tolerance
+  min_millable_multiplier: 1.2        # Min hole = 1.2× tool diameter</code></pre>
+
+        <h3>Tube Facing</h3>
+        <p>
+            For teams that machine aluminum tube, configure tube-specific parameters:
+        </p>
+        <pre><code>tube_facing:
+  depth_margin: 0.005               # Extra depth beyond half-height
+  max_roughing_depth: 0.3           # Roughing pass depth
+  max_finishing_depth: 0.51         # Finishing pass depth</code></pre>
+
+        <h2>Version 1 vs Version 2</h2>
+
+        <p>
+            PenguinCAM supports two config formats:
+        </p>
+
+        <h3>Version 1 (Legacy)</h3>
+        <p>
+            Single machine, flat structure. Still supported for backwards compatibility:
+        </p>
+        <pre><code># No version field = Version 1
+team_number: 1234
+team_name: "Your Team"
+machine_x_max: 24.0
+machine_y_max: 24.0</code></pre>
+
+        <h3>Version 2 (Current)</h3>
+        <p>
+            Multiple machines, nested structure. Recommended for new configs:
+        </p>
+        <pre><code>version: 2
+default_machine: main_cnc
+machines:
+  main_cnc:
+    name: "Main CNC"
+    ...</code></pre>
+
+        <p>
+            If you have an old Version 1 config, it will continue to work. Upgrade to Version 2 to support
+            multiple machines or per-machine material settings.
+        </p>
+
+        <h2>Validation</h2>
+
+        <p>
+            When PenguinCAM loads your config, it will:
+        </p>
+        <ul>
+            <li>Use your custom values where provided</li>
+            <li>Fall back to Team 6238 defaults for any missing values</li>
+            <li>Display warnings in the UI if materials are incomplete</li>
+        </ul>
+
+        <p>
+            Check the browser console (F12) after authenticating to see which config was loaded:
+        </p>
+        <pre><code>✅ Team config loaded: Your Team Name (#1234)</code></pre>
+
+        <h2>Troubleshooting</h2>
+
+        <h3>Config not loading</h3>
+        <p>
+            If PenguinCAM shows "Using default settings" instead of your config:
+        </p>
+        <ul>
+            <li>Verify the filename is exactly <code>PenguinCAM-config.yaml</code> (case sensitive)</li>
+            <li>Check that the document is shared with your team/organization in Onshape</li>
+            <li>Verify the document is shared with the PenguinCAM app (use "Share with applications" tab in Onshape sharing dialog)</li>
+            <li>Ensure you're authenticated with Onshape (click the login button)</li>
+            <li>Verify the file is valid YAML (use a YAML validator online)</li>
+        </ul>
+
+        <h3>Material shows warning</h3>
+        <p>
+            If you see "⚠️ This material has incomplete settings", it means your config defines the material
+            but is missing some required parameters (feed rate, plunge rate, etc.). The missing values will
+            use plywood defaults.
+        </p>
+
+        <h3>Multiple teams see the same config</h3>
+        <p>
+            This can happen if your config file is shared publicly. PenguinCAM now filters configs by ownership:
+        </p>
+        <ul>
+            <li>Only configs owned by your company/organization are used</li>
+            <li>If you see someone else's config, verify your file is in your company's Onshape documents</li>
+            <li>Don't share your config file publicly - keep it in your team/company folder</li>
+        </ul>
+
+        <h2>Example Configs</h2>
+
+        <h3>Basic Config (Single Machine)</h3>
+        <pre><code>version: 2
+default_machine: cnc
+
+team:
+  number: 1234
+  name: "Your Team Name"
+
+machines:
+  cnc:
+    name: "Team CNC"
+
+    machine:
+      dimensions:
+        x_max: 24.0
+        y_max: 24.0
+        z_max: 4.0
+
+    default_tool:
+      diameter: 0.157
+
+    materials:
+      plywood:
+        name: "Plywood"
+        feed_rate: 60.0
+        plunge_rate: 15.0
+
+      aluminum:
+        name: "Aluminum"
+        feed_rate: 45.0
+        plunge_rate: 10.0</code></pre>
+
+        <h3>Multi-Machine Config</h3>
+        <pre><code>version: 2
+default_machine: big_cnc
+
+team:
+  number: 1234
+  name: "Your Team"
+
+machines:
+  big_cnc:
+    name: "Competition Machine"
+    machine:
+      dimensions:
+        x_max: 48.0
+        y_max: 96.0
+    materials:
+      plywood:
+        feed_rate: 80.0
+
+  small_cnc:
+    name: "Prototype Machine"
+    machine:
+      dimensions:
+        x_max: 12.0
+        y_max: 12.0
+    materials:
+      plywood:
+        feed_rate: 40.0</code></pre>
+
+        <footer>
+            <p>Need help? Contact: <a href="mailto:penguincam@popcornpenguins.com">penguincam@popcornpenguins.com</a></p>
+        </footer>
+    </main>
+</body>
+</html>
