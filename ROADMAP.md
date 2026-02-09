@@ -77,15 +77,21 @@ PenguinCAM is ready for real-world use:
 #### Our DXF intermediate format supports the concept of layers which would be used for this
 #### But Onshape can not generate a multi-layer DXF file at this time, so we'd need to do it for them via part analysis
 
+### #6: Support tubing where opposite faces aren't the same
+
+**Priority:** Medium
+**Effort:** High
+
+#### Many teams do tube designs with larger holes on one side to support access to bolt heads
+
 ---
 
 ## 💡 Ideas for Consideration
 
 *(Not committed to roadmap yet, but worth exploring)*
 
-- Collision detection for tool holder
 - Batch processing multiple DXFs
-- G-code optimization (minimize tool changes)
+- G-code optimization (shorter tool paths)
 - Export simulation as video/animated GIF
 - Integration with other CAD platforms (Fusion 360, Inventor)
 - Library of CNC machines
