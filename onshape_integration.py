@@ -434,13 +434,11 @@ class OnshapeClient:
             response = self._make_api_request('POST', endpoint, json=body)
             
             log(f"Response status: {response.status_code}")
-            log(f"Response headers: {dict(response.headers)}")
             
             if response.status_code == 200:
                 log(f"Success! DXF content length: {len(response.content)} bytes")
                 # Check if it's actually DXF content
                 content_preview = response.content[:100].decode('utf-8', errors='ignore')
-                log(f"Content preview: {content_preview[:50]}...")
                 return response.content
             else:
                 log(f"exportinternal failed: {response.status_code}")
@@ -668,13 +666,11 @@ class OnshapeClient:
             response = self._make_api_request('GET', endpoint)
 
             log(f"\n📡 Response status: {response.status_code}")
-            log(f"📡 Response headers: {dict(response.headers)}")
 
             if response.status_code == 200:
                 data = response.json()
 
                 log(f"\n✅ API call succeeded")
-                log(f"Raw response keys: {list(data.keys())}")
 
                 # Parse bodies and faces
                 if 'bodies' in data:
@@ -706,21 +702,6 @@ class OnshapeClient:
 
                             log(f"     Face types: {face_types}")
 
-                            # Show first 5 faces with details
-                            for i, face in enumerate(faces[:5]):
-                                face_id = face.get('id', 'unknown')
-                                surface = face.get('surface', {})
-                                surface_type = surface.get('type', 'UNKNOWN')
-                                normal = surface.get('normal', {})
-                                area = face.get('area', 0)
-
-                                log(f"     Face {i+1}/{face_count}: ID={face_id}")
-                                log(f"       Type: {surface_type}")
-                                log(f"       Area: {area:.6f}")
-                                log(f"       Normal: ({normal.get('x', 0):.3f}, {normal.get('y', 0):.3f}, {normal.get('z', 0):.3f})")
-
-                            if len(faces) > 5:
-                                log(f"     ... and {len(faces) - 5} more faces")
                 else:
                     log(f"⚠️  WARNING: Response has no 'bodies' key!")
                     log(f"   Available keys: {list(data.keys())}")

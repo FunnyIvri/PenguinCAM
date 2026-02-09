@@ -1201,8 +1201,6 @@ def onshape_import():
         log(f"ONSHAPE IMPORT REQUEST")
         log(f"{'='*70}")
         log(f"Request URL: {request.url}")
-        log(f"Method: {request.method}")
-        log(f"Headers: {dict(request.headers)}")
 
         # Get parameters (either from query string or JSON body)
         if request.method == 'POST':
