@@ -982,6 +982,14 @@ class OnshapeClient:
                         METERS_TO_INCHES = 39.3701
                         signed_distance = signed_distance_m * METERS_TO_INCHES
 
+                        # DEBUG: Log coordinate system info for first few faces
+                        if len(parallel_faces) < 3:
+                            log(f"    DEBUG: ref_normal=({ref_nx:.4f}, {ref_ny:.4f}, {ref_nz:.4f})")
+                            log(f"    DEBUG: ref_origin=({ref_ox:.6f}, {ref_oy:.6f}, {ref_oz:.6f}) m")
+                            log(f"    DEBUG: face_origin=({ox:.6f}, {oy:.6f}, {oz:.6f}) m")
+                            log(f"    DEBUG: delta=({dx:.6f}, {dy:.6f}, {dz:.6f}) m")
+                            log(f"    DEBUG: signed_distance={signed_distance:.4f}\" (from {signed_distance_m:.6f} m)")
+
                         # Convert area from square meters to square inches
                         area_sq_in = face['area'] * (METERS_TO_INCHES ** 2)
 

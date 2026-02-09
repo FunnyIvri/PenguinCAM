@@ -1516,6 +1516,27 @@ def onshape_import():
                 if reference_face:
                     surface = reference_face.get('surface', {})
                     face_normal = surface.get('normal', {'x': 0, 'y': 0, 'z': 1})
+
+                    # CRITICAL: Validate normal direction - must point UP for correct depth signs
+                    nz = face_normal.get('z', 0)
+                    if nz < 0:
+                        log(f"⚠️  Selected face has downward-pointing normal (z={nz:.4f})")
+                        log("   Flipping normal to point upward for correct depth calculation")
+                        face_normal = {
+                            'x': -face_normal.get('x', 0),
+                            'y': -face_normal.get('y', 0),
+                            'z': -nz
+                        }
+                        log(f"   Flipped normal: z={face_normal['z']:.4f}")
+                    elif abs(nz) < 0.5:
+                        log(f"⚠️  Selected face normal is nearly horizontal (z={nz:.4f})")
+                        log("   Multi-layer export requires a top face (normal pointing up)")
+                        return jsonify({
+                            'error': 'Invalid reference face',
+                            'message': 'Please select a flat TOP face with normal pointing upward. The selected face appears to be vertical or tilted.'
+                        }), 400
+                    else:
+                        log(f"✅ Reference face normal pointing upward (z={nz:.4f})")
                 else:
                     log("❌ Could not find reference face for multi-layer export")
                     return jsonify({'error': 'Could not find reference face for multi-layer export. Please select a flat top face.'}), 500
