@@ -1158,6 +1158,8 @@ class OnshapeClient:
         log(f"\n{'='*70}")
         log(f"MULTI-LAYER DXF EXPORT")
         log(f"{'='*70}")
+        log(f"Reference normal: {reference_normal}")
+        log(f"Reference origin: {reference_origin}")
 
         # Find all parallel faces grouped by depth
         # Use tight tolerance (1 mil) to avoid grouping distinct layers
