@@ -243,6 +243,11 @@
                     <div class="alert error" id="errorAlert">
                         <div class="alert-title">Error</div>
                         <div id="errorMessage"></div>
+                        <div id="debugDxfLinkError" style="margin-top: 0.75rem; display: none;">
+                            <a href="/debug/download-dxf" style="color: var(--primary); text-decoration: underline;">
+                                🐛 Download debug DXF for manual testing
+                            </a>
+                        </div>
                     </div>
 
                     <div class="results" id="results">
@@ -256,6 +261,11 @@
                             </summary>
                             <div class="console-output" id="consoleOutput"></div>
                         </details>
+                        <div id="debugDxfLinkSuccess" style="margin-top: 1rem; display: none;">
+                            <a href="/debug/download-dxf" style="color: var(--text-dim); text-decoration: underline; font-size: 0.875rem;">
+                                🐛 Download debug DXF
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>

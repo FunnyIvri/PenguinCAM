@@ -753,6 +753,50 @@ def download_file(token):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+@app.route('/debug/download-dxf')
+@limiter.limit("30 per minute")
+def debug_download_dxf():
+    """
+    Debug endpoint: Download the multi-layer DXF file from the most recent Onshape import.
+    This allows manual testing of the postprocessor with the exact DXF that was generated.
+    """
+    try:
+        # Get DXF token from session
+        dxf_token = session.get('debug_dxf_token')
+        if not dxf_token:
+            return jsonify({
+                'error': 'No debug DXF available',
+                'message': 'Import a part from Onshape first. The DXF is only available for multi-layer (2.5D) imports.'
+            }), 404
+
+        # Look up file by token
+        file_info = file_token_manager.get_file(dxf_token)
+        if not file_info:
+            return jsonify({
+                'error': 'DXF file not found or expired',
+                'message': 'The DXF may have been cleaned up. Import the part again.'
+            }), 404
+
+        file_path = file_info['filepath']
+        real_filename = session.get('debug_dxf_filename', 'debug.dxf')
+
+        # Verify file still exists on disk
+        if not os.path.exists(file_path):
+            return jsonify({'error': 'DXF file no longer exists on disk'}), 404
+
+        log(f"🐛 Debug DXF download: {real_filename} ({os.path.getsize(file_path)} bytes)")
+
+        return send_file(
+            file_path,
+            as_attachment=True,
+            download_name=real_filename,
+            mimetype='application/dxf'
+        )
+    except Exception as e:
+        log(f"❌ Debug DXF download error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/uploads/<token>')
 @limiter.limit("30 per minute")
 def serve_upload(token):
@@ -1576,6 +1620,11 @@ def onshape_import():
         # Register DXF file with token manager for secure access
         dxf_token = file_token_manager.register_file(dxf_path, f"{suggested_filename}.dxf")
         log(f"🔗 Will be served at: /uploads/{dxf_token[:16]}...")
+
+        # Store DXF token in session for debug downloads
+        session['debug_dxf_token'] = dxf_token
+        session['debug_dxf_filename'] = f"{suggested_filename}.dxf"
+        log(f"🐛 Debug DXF available at: /debug/download-dxf")
 
         # Render main page with DXF auto-loaded
         # The frontend will detect the dxf_file parameter and auto-upload it

@@ -712,10 +712,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 .replace(/>/g, '&gt;')
                 .replace(/\n/g, '<br>');
             errorMessage.innerHTML = `<strong>${title}:</strong><br>${escapedMessage}`;
+
+            // Show debug DXF link if this is an Onshape import
+            const debugDxfLinkError = document.getElementById('debugDxfLinkError');
+            if (debugDxfLinkError && window.ONSHAPE_DATA && window.ONSHAPE_DATA.fromOnshape) {
+                debugDxfLinkError.style.display = 'block';
+            }
         }
 
         function hideError() {
             errorAlert.classList.remove('show');
+            const debugDxfLinkError = document.getElementById('debugDxfLinkError');
+            if (debugDxfLinkError) {
+                debugDxfLinkError.style.display = 'none';
+            }
         }
 
         function showResults(data) {
@@ -747,10 +757,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             stats.innerHTML = statsHtml.join('');
+
+            // Show debug DXF link if this is an Onshape import
+            const debugDxfLinkSuccess = document.getElementById('debugDxfLinkSuccess');
+            if (debugDxfLinkSuccess && window.ONSHAPE_DATA && window.ONSHAPE_DATA.fromOnshape) {
+                debugDxfLinkSuccess.style.display = 'block';
+            }
         }
 
         function hideResults() {
             results.classList.remove('show');
+            const debugDxfLinkSuccess = document.getElementById('debugDxfLinkSuccess');
+            if (debugDxfLinkSuccess) {
+                debugDxfLinkSuccess.style.display = 'none';
+            }
         }
 
         // DXF Setup State
