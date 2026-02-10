@@ -1190,7 +1190,6 @@ class FRCPostProcessor:
         
         # Footer
         gcode.append("(===== FINISH =====)")
-        gcode.append(f"G0 Z{self.safe_height:.4f}  ; Move to safe height")
         gcode.append(f"G53 G0 Z{self.machine_park_z:.4f}  ; Move to safe machine Z clearance")
         gcode.append("M9  ; Air blast off")
         gcode.append("M5  ; Spindle off")
