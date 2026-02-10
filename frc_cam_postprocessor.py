@@ -171,6 +171,13 @@ class FRCPostProcessor:
         self.machine_park_y = config.machine_park_y  # Y position for machine park (machine coordinates)
         self.machine_park_z = config.machine_park_z  # Z position for safe clearance (machine coordinates)
 
+        # Team information from config
+        self.team_number = config.team_number  # FRC team number
+        self.team_name = config.team_name  # FRC team name
+        self.machine_name = config.machine_name  # Machine name
+        self.machine_controller = config.machine_controller  # Controller type
+        self.machine_coolant = config.machine_coolant  # Coolant type
+
         # Helix entry radius multiplier (applied to tool diameter)
         # Overridden by material presets
         self.helix_radius_multiplier = 0.75  # Default 75% of tool radius
@@ -1041,18 +1048,6 @@ class FRCPostProcessor:
         gcode = []
         warnings = []
 
-        # Load machine config
-        config_path = os.path.join(os.path.dirname(__file__), 'machine_config.json')
-        try:
-            with open(config_path, 'r') as f:
-                machine_config = json.load(f)
-        except:
-            # Default config if file not found
-            machine_config = {
-                'machine': {'name': 'CNC Router', 'controller': 'Generic', 'coolant': 'Air'},
-                'team': {'number': 0, 'name': 'FRC Team'}
-            }
-
         # Use provided timestamp (from client's timezone) or generate one
         if not timestamp:
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -1072,11 +1067,8 @@ class FRCPostProcessor:
         # Calculate helical entry angle
         helical_angle = f"~{int(self.ramp_angle)} deg"
 
-        # Generate comprehensive header
-        team = machine_config.get('team', {})
-        machine = machine_config.get('machine', {})
-
-        gcode.append(f"({team.get('name', 'FRC Team').upper()} - Team {team.get('number', '0000')})")
+        # Generate comprehensive header using team info from config
+        gcode.append(f"({self.team_name.upper()} - Team {self.team_number})")
         gcode.append("(PenguinCAM CNC Post-Processor)")
 
         if hasattr(self, 'user_name'):
@@ -1086,11 +1078,11 @@ class FRCPostProcessor:
         gcode.append("")
 
         # Sanitize machine name to avoid nested parentheses in G-code comments
-        machine_name = machine.get('name', 'CNC Router').replace('(', '[').replace(')', ']')
-        controller = machine.get('controller', 'Generic').replace('(', '[').replace(')', ']')
+        machine_name_sanitized = self.machine_name.replace('(', '[').replace(')', ']')
+        controller_sanitized = self.machine_controller.replace('(', '[').replace(')', ']')
 
-        gcode.append(f"(Machine: {machine_name})")
-        gcode.append(f"(Controller: {controller})")
+        gcode.append(f"(Machine: {machine_name_sanitized})")
+        gcode.append(f"(Controller: {controller_sanitized})")
         gcode.append(f"(Machine bounds: X={self.config.machine_x_max:.1f}\" Y={self.config.machine_y_max:.1f}\" Z={self.config.machine_z_max:.1f}\")")
         gcode.append(f"(Units: {'Inches' if self.units == 'inch' else 'Millimeters'} - {'G20' if self.units == 'inch' else 'G21'})")
         gcode.append("(Coordinate system: G54)")
@@ -1106,7 +1098,7 @@ class FRCPostProcessor:
         gcode.append(f"(Material: {material_info})")
         gcode.append(f"(Tool: {self.tool_diameter}\" diam Flat End Mill)")
         gcode.append(f"(Spindle: {self.spindle_speed} RPM)")
-        gcode.append(f"(Coolant: {machine.get('coolant', 'None')})")
+        gcode.append(f"(Coolant: {self.machine_coolant})")
         gcode.append("")
 
         gcode.append(f"(ZMIN: {self.cut_depth:.4f}\")")
