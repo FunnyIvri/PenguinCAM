@@ -25,7 +25,7 @@ TEAM_6238_DEFAULTS = {
         'manufacturer': 'Generic',
         'controller': 'Generic',
         'dimensions': {'x_max': 24.0, 'y_max': 24.0, 'z_max': 8.0},
-        'park_position': {'x': 0.5, 'y': 0.5},
+        'park_position': {'x': 0.5, 'y': 0.5, 'z': -0.5},
         'standard_work_offset': 'G54',
         'tube_jig_work_offset': 'G55',
         'coolant': 'Air'
@@ -82,6 +82,7 @@ TEAM_6238_DEFAULTS = {
             'stepover_percentage': 0.65,
             'helix_radius_multiplier': 0.75,
             'max_slotting_depth': 0.4,
+            'peck_drill_depth': 0.05,
             'tab_width': 0.25,
             'tab_height': 0.15
         },
@@ -98,6 +99,7 @@ TEAM_6238_DEFAULTS = {
             'stepover_percentage': 0.25,
             'helix_radius_multiplier': 0.5,
             'max_slotting_depth': 0.2,
+            'peck_drill_depth': 0.05,
             'tab_width': 0.25,
             'tab_height': 0.15
         },
@@ -114,6 +116,7 @@ TEAM_6238_DEFAULTS = {
             'stepover_percentage': 0.55,
             'helix_radius_multiplier': 0.75,
             'max_slotting_depth': 0.25,
+            'peck_drill_depth': 0.05,
             'tab_width': 0.25,
             'tab_height': 0.15
         }
@@ -195,7 +198,7 @@ class TeamConfig:
         """
         Safely get nested dict value with fallback to Team 6238 defaults.
 
-        For v2 configs, looks inside the default machine config.
+        For v2 configs, checks root level first (for 'team'), then machine config.
 
         Args:
             *keys: Path to nested value (e.g., 'machine', 'park_position', 'x')
@@ -204,6 +207,21 @@ class TeamConfig:
         Returns:
             Value from config, or from TEAM_6238_DEFAULTS, or provided default
         """
+        # Special case: 'team' is at root level in v2 configs, not in machine config
+        if keys and keys[0] == 'team':
+            value = self._data
+            for key in keys:
+                if isinstance(value, dict):
+                    value = value.get(key)
+                    if value is None:
+                        break
+                else:
+                    value = None
+                    break
+
+            if value is not None:
+                return value
+
         # Get the default machine config (handles both v1 wrapped and v2 native)
         machine_config = self.get_machine_config(None)
 
@@ -312,6 +330,11 @@ class TeamConfig:
     def machine_park_y(self) -> float:
         """Machine park Y position (machine coordinates)"""
         return self._get('machine', 'park_position', 'y')
+
+    @property
+    def machine_park_z(self) -> float:
+        """Machine park Z position (machine coordinates, safe clearance)"""
+        return self._get('machine', 'park_position', 'z')
 
     @property
     def machine_coolant(self) -> str:

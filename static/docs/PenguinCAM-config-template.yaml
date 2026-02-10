@@ -54,6 +54,7 @@ machines:
       park_position:
         x: 0.5      # X position when parking (machine coords)
         y: 0.5      # Y position when parking (machine coords)
+        z: -0.5     # Z position for safe clearance (machine coords, negative = below home)
 
       # Coordinate systems
       standard_work_offset: "G54"       # Work offset for standard operations
@@ -124,6 +125,7 @@ machines:
         stepover_percentage: 0.65       # Radial stepover as fraction of tool diameter
         helix_radius_multiplier: 0.75   # Helix entry radius as fraction of tool radius
         max_slotting_depth: 0.4         # Maximum depth per pass for perimeter slotting (inches)
+        peck_drill_depth: 0.05          # Peck depth for G83 drilling small holes (inches)
 
         tab_width: 0.25
         tab_height: 0.15
@@ -144,6 +146,7 @@ machines:
         stepover_percentage: 0.25
         helix_radius_multiplier: 0.5
         max_slotting_depth: 0.2
+        peck_drill_depth: 0.05          # Peck depth for G83 drilling small holes (inches)
 
         tab_width: 0.25
         tab_height: 0.15
@@ -164,6 +167,7 @@ machines:
         stepover_percentage: 0.55
         helix_radius_multiplier: 0.75
         max_slotting_depth: 0.25
+        peck_drill_depth: 0.05          # Peck depth for G83 drilling small holes (inches)
 
         tab_width: 0.25
         tab_height: 0.15
@@ -194,6 +198,7 @@ machines:
       park_position:
         x: 0.5
         y: 23.5
+        z: -0.5     # Z position for safe clearance (machine coords, negative = below home)
 
       standard_work_offset: "G54"
       tube_jig_work_offset: "G55"
