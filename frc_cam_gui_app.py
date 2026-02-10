@@ -1824,14 +1824,10 @@ def require_admin():
 
     user_email = session.get('user_email')
     if not user_email:
-        return jsonify({'error': 'Unauthorized - not logged in', 'user_email': None}), 403
+        return jsonify({'error': 'Unauthorized - not logged in'}), 403
 
     if user_email != admin_email:
-        return jsonify({
-            'error': 'Unauthorized',
-            'user_email': user_email,
-            'admin_email': admin_email
-        }), 403
+        return jsonify({'error': 'Unauthorized'}), 403
 
     return None  # Success
 
