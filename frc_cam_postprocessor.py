@@ -318,6 +318,7 @@ class FRCPostProcessor:
         gcode.append('M0  ; Program pause')
         gcode.append('')
         gcode.append('( === RESTART AFTER PAUSE === )')
+        gcode.append('G90  ; Ensure absolute positioning mode')
         gcode.append(f'S{self.spindle_speed} M3  ; Spindle on')
         gcode.append('M7  ; Air blast on')
         gcode.append('G4 P3.0  ; 3 second spindle spin-up')
@@ -1127,6 +1128,10 @@ class FRCPostProcessor:
             gcode.append("G20  ; Inches")
         else:
             gcode.append("G21  ; Millimeters")
+
+        # Ensure absolute positioning mode
+        gcode.append("G90  ; Absolute positioning mode")
+        gcode.append("")
 
         # Spindle on
         gcode.append(f"S{self.spindle_speed} M3  ; Spindle on at {self.spindle_speed} RPM")
@@ -2432,6 +2437,7 @@ class FRCPostProcessor:
         gcode.append('( === INITIALIZATION === )')
         gcode.append('G90 G94 G91.1 G40 G49 G17')
         gcode.append('G20')
+        gcode.append('G90  ; Absolute positioning mode')
         gcode.append('')
         gcode.append('( Tool and spindle )')
         gcode.append('T1 M6')
@@ -2604,6 +2610,7 @@ class FRCPostProcessor:
         gcode.append('( === INITIALIZATION === )')
         gcode.append('G90 G94 G91.1 G40 G49 G17')
         gcode.append('G20')
+        gcode.append('G90  ; Absolute positioning mode')
         gcode.append('')
         gcode.append('( Tool and spindle )')
         gcode.append('T1 M6')
