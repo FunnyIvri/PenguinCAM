@@ -718,7 +718,7 @@ def process_file():
                          metadata={
                              'material': material,
                              'is_tube': is_aluminum_tube,
-                             'from_onshape': data.get('fromOnshape', False)
+                             'from_onshape': request.form.get('fromOnshape', 'false') == 'true'
                          })
 
         return jsonify(response_data)
