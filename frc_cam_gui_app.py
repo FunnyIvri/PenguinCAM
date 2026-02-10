@@ -25,6 +25,7 @@ from datetime import datetime
 from urllib.parse import urlencode
 import ezdxf
 import logging
+import metrics
 
 # Configure logging for Vercel
 logging.basicConfig(
@@ -708,6 +709,18 @@ def process_file():
             response_data['cycle_time'] = result.stats['cycle_time_display']
             response_data['cycle_time_seconds'] = result.stats['cycle_time_seconds']
 
+        # Log metrics
+        team_number = session.get('team_config_data', {}).get('team', {}).get('number')
+        user_email = session.get('user_email')
+        metrics.log_event('gcode_generated',
+                         team_number=team_number,
+                         user_email=user_email,
+                         metadata={
+                             'material': material,
+                             'is_tube': is_aluminum_tube,
+                             'from_onshape': data.get('fromOnshape', False)
+                         })
+
         return jsonify(response_data)
 
     except ValueError as e:
@@ -737,6 +750,14 @@ def download_file(token):
             return jsonify({'error': 'File not found'}), 404
 
         log(f"📥 Download request: token {token[:16]}... → {real_filename}")
+
+        # Log metrics
+        team_number = session.get('team_config_data', {}).get('team', {}).get('number')
+        user_email = session.get('user_email')
+        metrics.log_event('download',
+                         team_number=team_number,
+                         user_email=user_email,
+                         metadata={'filename': real_filename})
 
         return send_file(
             file_path,
@@ -892,6 +913,15 @@ def upload_to_drive(token):
 
         if result and result.get('success'):
             log(f"✅ Upload successful: {result.get('web_link')}")
+
+            # Log metrics
+            team_number = session.get('team_config_data', {}).get('team', {}).get('number')
+            user_email = session.get('user_email')
+            metrics.log_event('drive_save',
+                             team_number=team_number,
+                             user_email=user_email,
+                             metadata={'filename': real_filename})
+
             return jsonify({
                 'success': True,
                 'message': f'✅ Uploaded: {real_filename}',
@@ -1508,6 +1538,17 @@ def onshape_import():
         log(f"📂 Saved to: {dxf_path}")
         log(f"📏 File size on disk: {os.path.getsize(dxf_path)} bytes")
 
+        # Log metrics
+        team_number = session.get('team_config_data', {}).get('team', {}).get('number')
+        user_email = session.get('user_email')
+        metrics.log_event('onshape_import',
+                         team_number=team_number,
+                         user_email=user_email,
+                         metadata={
+                             'document_name': doc_name,
+                             'part_name': part_name
+                         })
+
         # Register DXF file with token manager for secure access
         dxf_token = file_token_manager.register_file(dxf_path, f"{suggested_filename}.dxf")
         log(f"🔗 Will be served at: /uploads/{dxf_token[:16]}...")
@@ -1770,6 +1811,61 @@ def onshape_element_panel():
                          workspace_id=workspace_id,
                          element_id=element_id,
                          server=server)
+
+# ============================================================================
+# ADMIN ENDPOINTS (Metrics)
+# ============================================================================
+
+def require_admin():
+    """Check if current user is authorized to access admin endpoints."""
+    admin_email = os.environ.get('ADMIN_EMAIL')
+    if not admin_email:
+        return jsonify({'error': 'Admin access not configured'}), 500
+
+    user_email = session.get('user_email')
+    if not user_email or user_email != admin_email:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    return None  # Success
+
+@app.route('/admin/metrics/summary')
+@limiter.limit("30 per minute")
+def admin_metrics_summary():
+    """Get summary of all metrics (admin only)."""
+    # Check authorization
+    auth_error = require_admin()
+    if auth_error:
+        return auth_error
+
+    summary = metrics.get_summary()
+    if summary is None:
+        return jsonify({'error': 'Metrics database unavailable'}), 503
+
+    return jsonify(summary)
+
+@app.route('/admin/metrics/events')
+@limiter.limit("30 per minute")
+def admin_metrics_events():
+    """Get recent events, optionally filtered (admin only)."""
+    # Check authorization
+    auth_error = require_admin()
+    if auth_error:
+        return auth_error
+
+    event_type = request.args.get('event_type')
+    limit = min(int(request.args.get('limit', 100)), 1000)  # Cap at 1000
+    offset = int(request.args.get('offset', 0))
+
+    events = metrics.get_events(event_type=event_type, limit=limit, offset=offset)
+    if events is None:
+        return jsonify({'error': 'Metrics database unavailable'}), 503
+
+    return jsonify({
+        'events': events,
+        'count': len(events),
+        'limit': limit,
+        'offset': offset
+    })
 
 def cleanup():
     """Clean up temporary files on shutdown"""
