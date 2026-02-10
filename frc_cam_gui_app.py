@@ -987,33 +987,41 @@ def onshape_oauth_callback():
             session['user_name'] = user_name
             session['user_email'] = user_email
 
-        # Get team config file
-        config_yaml = client.fetch_config_file()
-        if config_yaml:
-            log(f"🔍 DEBUG: Raw YAML length: {len(config_yaml)} bytes")
-            log(f"🔍 DEBUG: First 500 chars of YAML: {config_yaml[:500]}")
-            team_config = TeamConfig.from_yaml(config_yaml)
-            log(f"✅ Team config loaded: {team_config.team_name} (#{team_config.team_number})")
-            log(f"🔍 DEBUG: team_config._data keys: {list(team_config._data.keys())}")
-            log(f"🔍 DEBUG: team_config._data has 'team' key? {'team' in team_config._data}")
-            if 'team' in team_config._data:
-                log(f"🔍 DEBUG: team_config._data['team'] = {team_config._data['team']}")
-            session['team_config_data'] = team_config._data
-            session['team_config'] = team_config.to_dict()
-            session['using_default_config'] = False
+        # Check if there's a pending import (came from Onshape extension)
+        pending_import = session.get('pending_onshape_import')
+
+        # Only load config during auth if NOT coming from Onshape extension
+        # (Extension flow will load config during export endpoint)
+        if not pending_import:
+            log("ℹ️  Direct authentication (not from Onshape) - loading config now")
+            config_yaml = client.fetch_config_file()
+            if config_yaml:
+                log(f"🔍 DEBUG: Raw YAML length: {len(config_yaml)} bytes")
+                log(f"🔍 DEBUG: First 500 chars of YAML: {config_yaml[:500]}")
+                team_config = TeamConfig.from_yaml(config_yaml)
+                log(f"✅ Team config loaded: {team_config.team_name} (#{team_config.team_number})")
+                log(f"🔍 DEBUG: team_config._data keys: {list(team_config._data.keys())}")
+                log(f"🔍 DEBUG: team_config._data has 'team' key? {'team' in team_config._data}")
+                if 'team' in team_config._data:
+                    log(f"🔍 DEBUG: team_config._data['team'] = {team_config._data['team']}")
+                session['team_config_data'] = team_config._data
+                session['team_config'] = team_config.to_dict()
+                session['using_default_config'] = False
+            else:
+                log("⚠️  No team config found - using defaults")
+                team_config = TeamConfig()
+                session['team_config_data'] = {}
+                session['team_config'] = team_config.to_dict()
+                session['using_default_config'] = True
         else:
-            log("⚠️  No team config found - using defaults")
-            team_config = TeamConfig()
-            session['team_config_data'] = {}
-            session['team_config'] = team_config.to_dict()
-            session['using_default_config'] = True
+            log("ℹ️  Authentication from Onshape extension - will load config during export")
 
         log("="*60 + "\n")
 
         # Clean up OAuth state
         session.pop('onshape_oauth_state', None)
 
-        # Check if there was a pending import
+        # Get pending import (if any)
         pending_import = session.pop('pending_onshape_import', None)
 
         if pending_import:
@@ -1298,8 +1306,29 @@ def onshape_import():
             # Redirect to Onshape OAuth
             return redirect('/onshape/auth')
 
-        # User info and team config already loaded during OAuth callback
-        # Session contains: user_name, user_email, team_config, team_config_data
+        # Reload team config on every export (allows users to update config without re-authenticating)
+        log("\n" + "="*60)
+        log("🔄 Refreshing team config from Onshape...")
+        config_yaml = client.fetch_config_file()
+        if config_yaml:
+            log(f"🔍 DEBUG: Raw YAML length: {len(config_yaml)} bytes")
+            log(f"🔍 DEBUG: First 500 chars of YAML: {config_yaml[:500]}")
+            team_config = TeamConfig.from_yaml(config_yaml)
+            log(f"✅ Team config loaded: {team_config.team_name} (#{team_config.team_number})")
+            log(f"🔍 DEBUG: team_config._data keys: {list(team_config._data.keys())}")
+            log(f"🔍 DEBUG: team_config._data has 'team' key? {'team' in team_config._data}")
+            if 'team' in team_config._data:
+                log(f"🔍 DEBUG: team_config._data['team'] = {team_config._data['team']}")
+            session['team_config_data'] = team_config._data
+            session['team_config'] = team_config.to_dict()
+            session['using_default_config'] = False
+        else:
+            log("⚠️  No team config found - using defaults")
+            team_config = TeamConfig()
+            session['team_config_data'] = {}
+            session['team_config'] = team_config.to_dict()
+            session['using_default_config'] = True
+        log("="*60 + "\n")
 
         # Get document's owning company/classroom (Onshape Education context)
         # This requires a document, so we fetch it here rather than during OAuth
