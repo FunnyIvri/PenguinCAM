@@ -78,6 +78,7 @@ machines:
         enabled: true                   # Whether to use tabs at all
         width: 0.25                     # Default tab width (inches)
         height: 0.15                    # Default tab height (inches)
+        remove_tabs: true               # Automatically remove tabs at end of job
 
       # Hole detection
       holes:
@@ -218,6 +219,7 @@ machines:
         enabled: true
         width: 0.25
         height: 0.15
+        remove_tabs: true
 
       holes:
         detection_tolerance: 0.0001

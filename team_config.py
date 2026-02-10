@@ -39,7 +39,8 @@ TEAM_6238_DEFAULTS = {
             'enabled': True,
             'width': 0.25,
             'height': 0.1,
-            'spacing': 6.0
+            'spacing': 6.0,
+            'remove_tabs': True
         },
         'fixturing': {
             'pause_before_perimeter': False
@@ -388,6 +389,11 @@ class TeamConfig:
     def tabs_enabled(self) -> bool:
         """Whether tabs are enabled for perimeter cutting"""
         return self._get('machining', 'tabs', 'enabled')
+
+    @property
+    def remove_tabs(self) -> bool:
+        """Whether to automatically remove tabs at end of job"""
+        return self._get('machining', 'tabs', 'remove_tabs')
 
     @property
     def pause_before_perimeter(self) -> bool:

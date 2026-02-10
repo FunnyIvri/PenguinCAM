@@ -2046,8 +2046,8 @@ class FRCPostProcessor:
             gcode.append(f"G0 Z{self.retract_height:.4f}  ; Retract")
 
         # ===== TAB REMOVAL PASS =====
-        # Remove tabs in star pattern to gradually release the part (only if tabs were created)
-        if all_tab_positions:
+        # Remove tabs in star pattern to gradually release the part (only if tabs were created and removal is enabled)
+        if all_tab_positions and self.config.remove_tabs:
             gcode.append("")
             gcode.append("(===== TAB REMOVAL PASS =====)")
             gcode.append(f"(Removing {len(all_tab_positions)} tabs in star pattern)")
