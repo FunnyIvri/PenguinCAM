@@ -195,7 +195,7 @@ class TeamConfig:
         """
         Safely get nested dict value with fallback to Team 6238 defaults.
 
-        For v2 configs, looks inside the default machine config.
+        For v2 configs, checks root level first (for 'team'), then machine config.
 
         Args:
             *keys: Path to nested value (e.g., 'machine', 'park_position', 'x')
@@ -204,6 +204,21 @@ class TeamConfig:
         Returns:
             Value from config, or from TEAM_6238_DEFAULTS, or provided default
         """
+        # Special case: 'team' is at root level in v2 configs, not in machine config
+        if keys and keys[0] == 'team':
+            value = self._data
+            for key in keys:
+                if isinstance(value, dict):
+                    value = value.get(key)
+                    if value is None:
+                        break
+                else:
+                    value = None
+                    break
+
+            if value is not None:
+                return value
+
         # Get the default machine config (handles both v1 wrapped and v2 native)
         machine_config = self.get_machine_config(None)
 
