@@ -138,8 +138,7 @@ class FRCPostProcessor:
         self.clearance_height = config.clearance_height  # Clearance above material top for rapid moves (inches)
 
         # Calculated Z positions (Z=0 at sacrifice board)
-        self.safe_height = config.safe_height  # Safe height for rapid moves (absolute, not relative to material)
-        self.retract_height = material_thickness + self.clearance_height  # Retract above material
+        self.retract_height = material_thickness + self.clearance_height  # Retract above material for operations
         self.material_top = material_thickness  # Top surface of material
         self.cut_depth = -self.sacrifice_board_depth  # Cut slightly into sacrifice board
 
@@ -1333,7 +1332,6 @@ class FRCPostProcessor:
         if not is_multilayer:
             # Z-axis info (only for single-layer)
             gcode.append(f"(ZMIN: {self.cut_depth:.4f}\")")
-            gcode.append(f"(Safe Z: {self.safe_height:.4f}\")")
             gcode.append(f"(Retract Z: {self.retract_height:.4f}\")")
             gcode.append("")
 
@@ -1878,7 +1876,7 @@ class FRCPostProcessor:
         gcode.append(f"G3 X{final_x:.4f} Y{final_y:.4f} I{-final_toolpath_radius:.4f} J0 F{self.feed_rate}  ; Final cleanup circle CCW for climb milling")
 
         # Retract
-        gcode.append(f"G0 Z{self.safe_height:.4f}  ; Retract")
+        gcode.append(f"G0 Z{self.retract_height:.4f}  ; Retract")
 
         return gcode
 
@@ -2266,7 +2264,7 @@ class FRCPostProcessor:
         gcode.append(f"G1 X{offset_points[0][0]:.4f} Y{offset_points[0][1]:.4f} F{self.feed_rate}  ; Close pocket")
 
         # Retract
-        gcode.append(f"G0 Z{self.safe_height:.4f}  ; Retract")
+        gcode.append(f"G0 Z{self.retract_height:.4f}  ; Retract")
 
         return gcode
     
@@ -2580,7 +2578,7 @@ class FRCPostProcessor:
                 all_tab_positions = tab_positions
 
             # Retract
-            gcode.append(f"G0 Z{self.safe_height:.4f}  ; Retract")
+            gcode.append(f"G0 Z{self.retract_height:.4f}  ; Retract")
 
         # ===== TAB REMOVAL PASS =====
         # Remove tabs in star pattern to gradually release the part (only if tabs were created)
@@ -4065,7 +4063,7 @@ def main():
         print(f"  ** Zero your Z-axis to the SACRIFICE BOARD surface **")
         print(f"  Material top will be at Z={pp.material_top:.4f}\"")
         print(f"  Cut depth: Z={pp.cut_depth:.4f}\" ({pp.sacrifice_board_depth:.4f}\" into sacrifice board)")
-        print(f"  Safe height: Z={pp.safe_height:.4f}\"")
+        print(f"  Retract height: Z={pp.retract_height:.4f}\"")
         print(f"\nTool compensation applied:")
         print(f"  Tool diameter: {pp.tool_diameter:.4f}\"")
         print(f"  Tool radius: {pp.tool_radius:.4f}\"")

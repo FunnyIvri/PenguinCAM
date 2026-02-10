@@ -33,7 +33,6 @@ TEAM_6238_DEFAULTS = {
     'machining': {
         'z_reference': {
             'sacrifice_board_depth': 0.008,
-            'safe_height': 1.5,
             'clearance_height': 0.5
         },
         'tabs': {
@@ -366,11 +365,6 @@ class TeamConfig:
         return self._get('machining', 'z_reference', 'sacrifice_board_depth')
 
     @property
-    def safe_height(self) -> float:
-        """Safe height for rapid moves (inches)"""
-        return self._get('machining', 'z_reference', 'safe_height')
-
-    @property
     def clearance_height(self) -> float:
         """Clearance above material for rapid moves (inches)"""
         return self._get('machining', 'z_reference', 'clearance_height')
@@ -690,7 +684,6 @@ machining:
   # Z-axis reference system
   z_reference:
     sacrifice_board_depth: 0.008    # How far to cut into sacrifice board (inches)
-    safe_height: 1.5                # Safe height for rapid moves (inches)
     clearance_height: 0.5           # Clearance above material for rapid moves (inches)
 
   # Tab parameters (for perimeter operations)

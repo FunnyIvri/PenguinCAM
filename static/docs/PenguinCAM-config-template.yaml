@@ -71,7 +71,6 @@ machines:
       # Z-axis reference system
       z_reference:
         sacrifice_board_depth: 0.008    # How far to cut into sacrifice board (inches)
-        safe_height: 1.5                # Safe height for rapid moves (inches)
         clearance_height: 0.5           # Clearance above material for rapid moves (inches)
 
       # Tab parameters (for perimeter operations)
@@ -213,7 +212,6 @@ machines:
     machining:
       z_reference:
         sacrifice_board_depth: 0.008
-        safe_height: 1.5
         clearance_height: 0.5
 
       tabs:
