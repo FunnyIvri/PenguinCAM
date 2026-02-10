@@ -1116,7 +1116,9 @@ class OnshapeClient:
             log(f"   ✅ Using config from your workspace: {doc_name} (ID: {doc_id[:8]}...)")
 
             # Get workspace ID from search results (v13 includes defaultWorkspace)
+            log(f"   🔍 DEBUG: config_doc keys: {list(config_doc.keys())}")
             workspace_id = config_doc.get('defaultWorkspace', {}).get('id')
+            log(f"   🔍 DEBUG: workspace_id from defaultWorkspace: {workspace_id}")
             if not workspace_id:
                 log("   ⚠️  No defaultWorkspace in search results, fetching document info...")
                 # Fallback: fetch document info separately
@@ -1129,9 +1131,10 @@ class OnshapeClient:
                     log("   ❌ No default workspace found")
                     return None
 
-            log(f"   Using workspace: {workspace_id[:8]}...")
+            log(f"   ✅ Using workspace: {workspace_id[:8]}...")
 
             # List elements to find the YAML file tab
+            log(f"   🔍 DEBUG: Listing elements for doc {doc_id[:8]}, workspace {workspace_id[:8]}")
             response = self._make_api_request(
                 'GET',
                 f'/documents/d/{doc_id}/w/{workspace_id}/elements'
@@ -1139,18 +1142,23 @@ class OnshapeClient:
 
             if response.status_code != 200:
                 log(f"   ❌ Could not list elements: HTTP {response.status_code}")
+                log(f"   Response: {response.text[:500]}")
                 return None
 
             elements = response.json()
+            log(f"   🔍 DEBUG: Got {len(elements)} elements")
 
             # Look for a Blob element with exact filename match
             config_element = None
             for elem in elements:
                 elem_name = elem.get('name', '')
+                elem_type = elem.get('type', '')
+                log(f"   🔍 DEBUG: Element: {elem_name} (type: {elem_type})")
                 # Match exact filename (case-insensitive)
                 if (elem.get('type') == 'Blob' and
                     elem_name.lower() in ['penguincam-config.yaml', 'penguincam-config.yml']):
                     config_element = elem
+                    log(f"   🔍 DEBUG: MATCH! Found config element")
                     break
 
             if not config_element:
@@ -1164,25 +1172,29 @@ class OnshapeClient:
             log(f"   ✅ Found YAML element: {element_name} (ID: {element_id[:8]}...)")
 
             # Download the blob content as text
+            log(f"   🔍 DEBUG: Downloading blob element {element_id[:8]}...")
             response = self._make_api_request(
                 'GET',
                 f'/blobelements/d/{doc_id}/w/{workspace_id}/e/{element_id}'
             )
 
+            log(f"   🔍 DEBUG: Blob download response status: {response.status_code}")
             if response.status_code != 200:
                 log(f"   ❌ Could not download blob: HTTP {response.status_code}")
+                log(f"   Response: {response.text[:500]}")
                 return None
 
             # Return raw text content
             config_yaml = response.text
             log(f"   ✅ Successfully fetched config file ({len(config_yaml)} bytes)")
+            log(f"   🔍 DEBUG: Returning config_yaml (is None? {config_yaml is None})")
 
             return config_yaml
 
         except Exception as e:
-            log(f"   ❌ Error fetching config file: {e}")
+            log(f"   ❌ EXCEPTION in fetch_config_file: {e}")
             import traceback
-            log(traceback.format_exc())
+            log(f"   Full traceback:\n{traceback.format_exc()}")
             return None
 
     def parse_onshape_url(self, url):
