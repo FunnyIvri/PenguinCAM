@@ -1546,7 +1546,7 @@ def onshape_import():
                          user_email=user_email,
                          metadata={
                              'document_name': doc_name,
-                             'part_name': part_name
+                             'part_name': part_name_from_body
                          })
 
         # Register DXF file with token manager for secure access
