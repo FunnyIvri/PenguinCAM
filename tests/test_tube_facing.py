@@ -227,16 +227,18 @@ class TestTubeFacingGeneration(unittest.TestCase):
         finally:
             os.unlink(output_path)
 
-    def test_contains_z_homing(self):
-        """Test output contains Z axis homing sequence."""
+    def test_contains_safe_z_clearance(self):
+        """Test output contains safe Z clearance moves using machine coordinates."""
         with tempfile.NamedTemporaryFile(suffix='.nc', delete=False) as f:
             output_path = f.name
         try:
             self._generate_tube_gcode_to_file(output_path, '1x1')
             with open(output_path) as f:
                 content = f.read()
-            self.assertIn("G0 G28 G91 Z0", content)
-            self.assertIn("G90", content)  # Back to absolute mode
+            # Should use G53 G0 Z with park_z value (default -0.5) for safe clearance
+            self.assertIn("G53 G0 Z", content)
+            # Should not use G28 (removed to avoid soft limit issues on some machines)
+            self.assertNotIn("G28", content)
         finally:
             os.unlink(output_path)
 

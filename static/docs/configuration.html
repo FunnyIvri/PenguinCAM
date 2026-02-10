@@ -143,6 +143,26 @@
             </tbody>
         </table>
 
+        <h3>Park Position (Machine Coordinates)</h3>
+        <p>
+            Configure where the machine parks at the end of programs for safe part access.
+            These use G53 (machine coordinates), not work coordinates:
+        </p>
+        <pre><code>park_position:
+  x: 0.5       # X position in machine coords
+  y: 0.5       # Y position in machine coords
+  z: -0.5      # Z safe clearance below home</code></pre>
+
+        <div class="info-box">
+            <div class="info-icon">⚠️</div>
+            <div>
+                <strong>Important for machines with soft limits:</strong> Some controllers (like standalone Omio with Digital Dream)
+                have soft limits near the home position. If your machine trips soft limits when parking at Z=0,
+                set <code>park_z</code> to a negative value (e.g., -0.125 for 3mm clearance from limit).
+                Negative values move <em>below</em> the home position.
+            </div>
+        </div>
+
         <h3>Default Tool</h3>
         <p>
             Set the default tool diameter that appears when loading a new part:

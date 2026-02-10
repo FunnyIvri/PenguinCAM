@@ -54,6 +54,7 @@ machines:
       park_position:
         x: 0.5      # X position when parking (machine coords)
         y: 0.5      # Y position when parking (machine coords)
+        z: -0.5     # Z position for safe clearance (machine coords, negative = below home)
 
       # Coordinate systems
       standard_work_offset: "G54"       # Work offset for standard operations
@@ -194,6 +195,7 @@ machines:
       park_position:
         x: 0.5
         y: 23.5
+        z: -0.5     # Z position for safe clearance (machine coords, negative = below home)
 
       standard_work_offset: "G54"
       tube_jig_work_offset: "G55"

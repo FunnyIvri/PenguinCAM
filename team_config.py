@@ -25,7 +25,7 @@ TEAM_6238_DEFAULTS = {
         'manufacturer': 'Generic',
         'controller': 'Generic',
         'dimensions': {'x_max': 24.0, 'y_max': 24.0, 'z_max': 8.0},
-        'park_position': {'x': 0.5, 'y': 0.5},
+        'park_position': {'x': 0.5, 'y': 0.5, 'z': -0.5},
         'standard_work_offset': 'G54',
         'tube_jig_work_offset': 'G55',
         'coolant': 'Air'
@@ -312,6 +312,11 @@ class TeamConfig:
     def machine_park_y(self) -> float:
         """Machine park Y position (machine coordinates)"""
         return self._get('machine', 'park_position', 'y')
+
+    @property
+    def machine_park_z(self) -> float:
+        """Machine park Z position (machine coordinates, safe clearance)"""
+        return self._get('machine', 'park_position', 'z')
 
     @property
     def machine_coolant(self) -> str:

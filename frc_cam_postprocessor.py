@@ -169,6 +169,7 @@ class FRCPostProcessor:
         # Machine-specific constants from config
         self.machine_park_x = config.machine_park_x  # X position for machine park (machine coordinates)
         self.machine_park_y = config.machine_park_y  # Y position for machine park (machine coordinates)
+        self.machine_park_z = config.machine_park_z  # Z position for safe clearance (machine coordinates)
 
         # Helix entry radius multiplier (applied to tool diameter)
         # Overridden by material presets
@@ -297,7 +298,7 @@ class FRCPostProcessor:
         gcode = []
         gcode.append('')
         gcode.append(f'( === {title} === )')
-        gcode.append('G53 G0 Z0.  ; Move to machine Z0 - safe clearance')
+        gcode.append(f'G53 G0 Z{self.machine_park_z:.4f}  ; Move to safe machine Z clearance')
         gcode.append(f'G53 G0 X{self.machine_park_x} Y{self.machine_park_y}  ; Park at back of machine')
         gcode.append('M9  ; Air blast off')
         gcode.append('M5  ; Spindle off')
@@ -1135,11 +1136,6 @@ class FRCPostProcessor:
         else:
             gcode.append("G21  ; Millimeters")
 
-        # Home Z axis (G28) - use G0 for rapid speed
-        gcode.append("G28 G91 Z0.  ; Home Z axis at rapid speed")
-        gcode.append("G90  ; Back to absolute mode")
-        gcode.append("")
-
         # Spindle on
         gcode.append(f"S{self.spindle_speed} M3  ; Spindle on at {self.spindle_speed} RPM")
         gcode.append("M7  ; Air blast on")
@@ -1150,8 +1146,8 @@ class FRCPostProcessor:
         gcode.append("G54  ; Use work coordinate system 1")
         gcode.append("")
 
-        # Initial safe move to machine coordinate Z0 (stay high to avoid fixture collisions during XY moves)
-        gcode.append("G53 G0 Z0.  ; Move to machine coordinate Z0 (safe clearance) - stay high for XY rapids")
+        # Initial safe move (stay high to avoid fixture collisions during XY moves)
+        gcode.append(f"G53 G0 Z{self.machine_park_z:.4f}  ; Move to safe machine Z clearance")
         gcode.append("G0 X0 Y0  ; Rapid to work origin")
         gcode.append("")
 
@@ -1198,7 +1194,7 @@ class FRCPostProcessor:
         # Footer
         gcode.append("(===== FINISH =====)")
         gcode.append(f"G0 Z{self.safe_height:.4f}  ; Move to safe height")
-        gcode.append("G53 G0 Z0.  ; Move to machine coordinate Z0 (safe clearance)")
+        gcode.append(f"G53 G0 Z{self.machine_park_z:.4f}  ; Move to safe machine Z clearance")
         gcode.append("M9  ; Air blast off")
         gcode.append("M5  ; Spindle off")
         gcode.append(f"G53 G0 X{self.machine_park_x} Y{self.machine_park_y}  ; Move gantry to back of machine for easy access")
@@ -2444,8 +2440,6 @@ class FRCPostProcessor:
         gcode.append('( === INITIALIZATION === )')
         gcode.append('G90 G94 G91.1 G40 G49 G17')
         gcode.append('G20')
-        gcode.append('G28 G91 Z0.  ; Home Z axis at rapid speed')
-        gcode.append('G90  ; Back to absolute mode')
         gcode.append('')
         gcode.append('( Tool and spindle )')
         gcode.append('T1 M6')
@@ -2460,7 +2454,7 @@ class FRCPostProcessor:
         gcode.append('( === PHASE 1: FACE FIRST HALF === )')
         gcode.append('( Face from Y=-0.125 to Y=+0.125 )')
         gcode.append('')
-        gcode.append('G53 G0 Z0.  ; Move to machine Z0 - safe clearance')
+        gcode.append(f'G53 G0 Z{self.machine_park_z:.4f}  ; Move to safe machine Z clearance')
         gcode.append('G0 X0 Y0  ; Rapid to work origin')
         gcode.append('')
 
@@ -2484,7 +2478,7 @@ class FRCPostProcessor:
         gcode.append('( === PHASE 2: FACE SECOND HALF === )')
         gcode.append('( Face from Y=-0.250 to Y=-0.125 )')
         gcode.append('')
-        gcode.append('G53 G0 Z0.  ; Move to machine Z0 - safe clearance')
+        gcode.append(f'G53 G0 Z{self.machine_park_z:.4f}  ; Move to safe machine Z clearance')
         gcode.append('G0 X0 Y0  ; Rapid to work origin')
         gcode.append('')
 
@@ -2498,7 +2492,7 @@ class FRCPostProcessor:
         # === END ===
         gcode.append('')
         gcode.append('( === PROGRAM END === )')
-        gcode.append('G53 G0 Z0.  ; Move to machine Z0 (safe clearance)')
+        gcode.append(f'G53 G0 Z{self.machine_park_z:.4f}  ; Move to safe machine Z clearance')
         gcode.append(f'G53 G0 X{self.machine_park_x} Y{self.machine_park_y}  ; Park at back of machine')
         gcode.append('M9  ; Air blast off')
         gcode.append('M5')
@@ -2618,8 +2612,6 @@ class FRCPostProcessor:
         gcode.append('( === INITIALIZATION === )')
         gcode.append('G90 G94 G91.1 G40 G49 G17')
         gcode.append('G20')
-        gcode.append('G28 G91 Z0.  ; Home Z axis')
-        gcode.append('G90  ; Back to absolute mode')
         gcode.append('')
         gcode.append('( Tool and spindle )')
         gcode.append('T1 M6')
@@ -2751,7 +2743,7 @@ class FRCPostProcessor:
         # === END ===
         gcode.append('')
         gcode.append('( === PROGRAM END === )')
-        gcode.append('G53 G0 Z0.')
+        gcode.append(f'G53 G0 Z{self.machine_park_z:.4f}')
         gcode.append(f'G53 G0 X{self.machine_park_x} Y{self.machine_park_y}')
         gcode.append('M9  ; Air blast off')
         gcode.append('M5')
