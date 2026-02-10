@@ -566,8 +566,11 @@ def process_file():
 
         # Get team config from session (if available)
         config_data = session.get('team_config_data', {})
+        log(f"🔍 DEBUG: Session team_config_data keys: {list(config_data.keys()) if config_data else 'EMPTY'}")
+        log(f"🔍 DEBUG: Session has {len(config_data)} top-level keys in team_config_data")
         team_config = TeamConfig.from_dict(config_data)
         log(f"📋 Using team config: {team_config}")
+        log(f"🔍 DEBUG: TeamConfig internals: team={team_config.team_number}, name={team_config.team_name}")
 
         # Call post-processor API based on mode
         try:
