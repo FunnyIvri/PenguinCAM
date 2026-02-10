@@ -236,6 +236,12 @@ class FRCPostProcessor:
         # Helix entry radius multiplier
         self.helix_radius_multiplier = preset['helix_radius_multiplier']
 
+        # Peck drill depth (convert to mm if needed)
+        if self.units == 'mm':
+            self.peck_drill_depth = preset['peck_drill_depth'] * 25.4
+        else:
+            self.peck_drill_depth = preset['peck_drill_depth']
+
         print(f"\nApplied material preset: {preset.get('name', material.capitalize())}")
         if 'description' in preset:
             print(f"  {preset['description']}")
@@ -830,14 +836,23 @@ class FRCPostProcessor:
             center = circle['center']
 
             # Check if hole is too small to mill with this tool
-            if diameter < self.min_millable_hole:
-                error_msg = f"Hole at ({center[0]:.3f}, {center[1]:.3f}) has diameter {diameter:.3f}\" which is too small for {self.tool_diameter:.3f}\" tool (minimum: {self.min_millable_hole:.3f}\")"
+            if diameter < self.tool_diameter:
+                error_msg = f"Hole at ({center[0]:.3f}, {center[1]:.3f}) has diameter {diameter:.3f}\" which is too small for {self.tool_diameter:.3f}\" tool"
                 self._add_error(error_msg)
                 continue
 
-            # All millable holes use the same strategy (helical + spiral)
-            self.holes.append({'center': center, 'diameter': diameter})
-            print(f"  Hole (d={diameter:.3f}\") at ({center[0]:.3f}, {center[1]:.3f})")
+            # Determine machining strategy based on hole size
+            if diameter < self.min_millable_hole:
+                # Hole is larger than tool but too small to helical entry
+                # Use peck drilling to get down, then spiral clear at bottom
+                strategy = 'peck+spiral'
+                self.holes.append({'center': center, 'diameter': diameter, 'needs_peck_drill': True})
+                print(f"  Hole (d={diameter:.3f}\") at ({center[0]:.3f}, {center[1]:.3f}) - using peck drill + spiral")
+            else:
+                # Hole is large enough for helical entry
+                strategy = 'helical+spiral'
+                self.holes.append({'center': center, 'diameter': diameter, 'needs_peck_drill': False})
+                print(f"  Hole (d={diameter:.3f}\") at ({center[0]:.3f}, {center[1]:.3f}) - using helical + spiral")
 
         print(f"\nIdentified {len(self.holes)} millable holes")
         if self.errors:
@@ -1154,8 +1169,10 @@ class FRCPostProcessor:
             for i, hole in enumerate(self.holes, 1):
                 center = hole['center']
                 diameter = hole['diameter']
-                gcode.append(f"(Hole {i} - {diameter:.3f}\" diameter)")
-                gcode.extend(self._generate_hole_gcode(center[0], center[1], diameter))
+                needs_peck = hole.get('needs_peck_drill', False)
+                strategy = "peck + spiral" if needs_peck else "helical + spiral"
+                gcode.append(f"(Hole {i} - {diameter:.3f}\" diameter - {strategy})")
+                gcode.extend(self._generate_hole_gcode(center[0], center[1], diameter, needs_peck_drill=needs_peck))
                 gcode.append("")
         
         # Pockets
@@ -1275,14 +1292,85 @@ class FRCPostProcessor:
 
         return num_passes, depth_per_pass
 
-    def _generate_hole_gcode(self, cx: float, cy: float, diameter: float) -> List[str]:
+    def _generate_peck_drill_and_spiral_gcode(self, cx: float, cy: float, diameter: float, final_toolpath_radius: float) -> List[str]:
         """
-        Generate G-code for a hole using helical entry + spiral-out strategy.
-        Uses helical interpolation to safely enter, then spirals outward in multiple passes.
+        Generate G-code for small holes using G83 peck drilling + spiral clearing.
+
+        For holes that are larger than the tool but too small to helical entry into,
+        we peck drill straight down to full depth, then do a single spiral clearing
+        pass at the bottom to open the hole to the final diameter.
 
         Args:
             cx, cy: Hole center coordinates
             diameter: Hole diameter (from CAD)
+            final_toolpath_radius: Target toolpath radius for spiral clearing
+        """
+        gcode = []
+
+        # Peck drilling parameters (from material settings)
+        peck_depth = self.peck_drill_depth
+        retract_plane = self.retract_height  # Clearance above material
+        final_depth = self.cut_depth  # Bottom of cut (negative value)
+
+        gcode.append(f"(Peck drill at center, then spiral clear to {diameter:.3f}\" diameter)")
+
+        # Rapid to hole center above material
+        gcode.append(f"G0 X{cx:.4f} Y{cy:.4f}  ; Rapid to hole center")
+        gcode.append(f"G0 Z{retract_plane:.4f}  ; Move to retract plane")
+
+        # G83 peck drilling cycle
+        # Format: G83 X__ Y__ Z__ R__ Q__ F__
+        # Z = final depth (negative), R = retract plane, Q = peck depth, F = plunge rate
+        gcode.append(f"G83 X{cx:.4f} Y{cy:.4f} Z{final_depth:.4f} R{retract_plane:.4f} Q{peck_depth:.4f} F{self.plunge_rate}  ; Peck drill to full depth")
+        gcode.append("G80  ; Cancel canned cycle")
+
+        # Now at bottom of hole, do spiral clearing pass to open to final diameter
+        # Start from center and spiral outward
+        stepover = self.tool_diameter * self.stepover_percentage
+
+        # We're already at center at full depth, so start spiraling immediately
+        gcode.append(f"(Spiral clear from center to r={final_toolpath_radius:.4f}\")")
+
+        # Calculate spiral parameters for clearing from center to final radius
+        spiral_constant = stepover / (2 * math.pi)
+        total_angle = final_toolpath_radius / spiral_constant if spiral_constant > 0 else 0
+
+        # Generate spiral points from center outward
+        angle_increment = math.radians(10)  # 10 degrees per segment
+        num_points = int(math.ceil(total_angle / angle_increment))
+
+        # Spiral outward from center (r=0) to final radius
+        for i in range(1, num_points + 1):  # Start at i=1 to avoid staying at center
+            current_angle = i * angle_increment
+            current_radius = spiral_constant * current_angle
+            current_radius = min(current_radius, final_toolpath_radius)  # Don't exceed target
+
+            # Convert polar to Cartesian
+            x = cx + current_radius * math.cos(current_angle)
+            y = cy + current_radius * math.sin(current_angle)
+
+            gcode.append(f"G1 X{x:.4f} Y{y:.4f} F{self.feed_rate}")
+
+        # Final cleanup pass at exact final radius (full circle)
+        final_x = cx + final_toolpath_radius
+        final_y = cy
+        gcode.append(f"G1 X{final_x:.4f} Y{final_y:.4f} F{self.feed_rate}  ; Move to final radius")
+        gcode.append(f"G3 X{final_x:.4f} Y{final_y:.4f} I{-final_toolpath_radius:.4f} J0 F{self.feed_rate}  ; Final cleanup circle CCW for climb milling")
+
+        # Retract
+        gcode.append(f"G0 Z{self.safe_height:.4f}  ; Retract")
+
+        return gcode
+
+    def _generate_hole_gcode(self, cx: float, cy: float, diameter: float, needs_peck_drill: bool = False) -> List[str]:
+        """
+        Generate G-code for a hole using helical entry + spiral-out strategy,
+        or peck drilling + spiral for small holes.
+
+        Args:
+            cx, cy: Hole center coordinates
+            diameter: Hole diameter (from CAD)
+            needs_peck_drill: If True, use G83 peck drilling instead of helical entry
         """
         gcode = []
 
@@ -1293,6 +1381,10 @@ class FRCPostProcessor:
         if final_toolpath_radius <= 0:
             gcode.append(f"(WARNING: Tool diameter {self.tool_diameter:.4f}\" is too large for {diameter:.4f}\" hole!)")
             return gcode
+
+        # If hole is too small for helical entry, use peck drilling to get down
+        if needs_peck_drill:
+            return self._generate_peck_drill_and_spiral_gcode(cx, cy, diameter, final_toolpath_radius)
 
         # Strategy: Helical entry at small radius, then spiral outward
         # Each pass increases the radius by stepover percentage (material-specific)
@@ -2831,7 +2923,8 @@ class FRCPostProcessor:
                 toolpath.extend(self._generate_hole_gcode(
                     hole['center'][0],  # cx
                     hole['center'][1],  # cy
-                    hole['diameter']    # diameter
+                    hole['diameter'],   # diameter
+                    needs_peck_drill=hole.get('needs_peck_drill', False)
                 ))
 
         # Generate toolpaths for pockets
@@ -2889,7 +2982,8 @@ class FRCPostProcessor:
                 # Generate fresh toolpath for the mirrored hole
                 # This preserves helical entry + outward spiral safety
                 toolpath.extend(self._generate_hole_gcode(
-                    mirrored_cx, mirrored_cy, hole['diameter']
+                    mirrored_cx, mirrored_cy, hole['diameter'],
+                    needs_peck_drill=hole.get('needs_peck_drill', False)
                 ))
 
         # Generate toolpaths for mirrored pockets

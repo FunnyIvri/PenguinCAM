@@ -82,6 +82,7 @@ TEAM_6238_DEFAULTS = {
             'stepover_percentage': 0.65,
             'helix_radius_multiplier': 0.75,
             'max_slotting_depth': 0.4,
+            'peck_drill_depth': 0.05,
             'tab_width': 0.25,
             'tab_height': 0.15
         },
@@ -98,6 +99,7 @@ TEAM_6238_DEFAULTS = {
             'stepover_percentage': 0.25,
             'helix_radius_multiplier': 0.5,
             'max_slotting_depth': 0.2,
+            'peck_drill_depth': 0.05,
             'tab_width': 0.25,
             'tab_height': 0.15
         },
@@ -114,6 +116,7 @@ TEAM_6238_DEFAULTS = {
             'stepover_percentage': 0.55,
             'helix_radius_multiplier': 0.75,
             'max_slotting_depth': 0.25,
+            'peck_drill_depth': 0.05,
             'tab_width': 0.25,
             'tab_height': 0.15
         }
