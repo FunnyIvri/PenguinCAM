@@ -710,7 +710,7 @@ def process_file():
             response_data['cycle_time_seconds'] = result.stats['cycle_time_seconds']
 
         # Log metrics
-        team_number = session.get('team_config_data', {}).get('team', {}).get('number')
+        team_number = session.get('team_number')
         user_email = session.get('user_email')
         metrics.log_event('gcode_generated',
                          team_number=team_number,
@@ -752,7 +752,7 @@ def download_file(token):
         log(f"📥 Download request: token {token[:16]}... → {real_filename}")
 
         # Log metrics
-        team_number = session.get('team_config_data', {}).get('team', {}).get('number')
+        team_number = session.get('team_number')
         user_email = session.get('user_email')
         metrics.log_event('download',
                          team_number=team_number,
@@ -915,7 +915,7 @@ def upload_to_drive(token):
             log(f"✅ Upload successful: {result.get('web_link')}")
 
             # Log metrics
-            team_number = session.get('team_config_data', {}).get('team', {}).get('number')
+            team_number = session.get('team_number')
             user_email = session.get('user_email')
             metrics.log_event('drive_save',
                              team_number=team_number,
@@ -1036,12 +1036,14 @@ def onshape_oauth_callback():
                     log(f"🔍 DEBUG: team_config._data['team'] = {team_config._data['team']}")
                 session['team_config_data'] = team_config._data
                 session['team_config'] = team_config.to_dict()
+                session['team_number'] = team_config.team_number
                 session['using_default_config'] = False
             else:
                 log("⚠️  No team config found - using defaults")
                 team_config = TeamConfig()
                 session['team_config_data'] = {}
                 session['team_config'] = team_config.to_dict()
+                session['team_number'] = team_config.team_number
                 session['using_default_config'] = True
         else:
             log("ℹ️  Authentication from Onshape extension - will load config during export")
@@ -1351,12 +1353,14 @@ def onshape_import():
                 log(f"🔍 DEBUG: team_config._data['team'] = {team_config._data['team']}")
             session['team_config_data'] = team_config._data
             session['team_config'] = team_config.to_dict()
+            session['team_number'] = team_config.team_number
             session['using_default_config'] = False
         else:
             log("⚠️  No team config found - using defaults")
             team_config = TeamConfig()
             session['team_config_data'] = {}
             session['team_config'] = team_config.to_dict()
+            session['team_number'] = team_config.team_number
             session['using_default_config'] = True
         log("="*60 + "\n")
 
@@ -1539,7 +1543,7 @@ def onshape_import():
         log(f"📏 File size on disk: {os.path.getsize(dxf_path)} bytes")
 
         # Log metrics
-        team_number = session.get('team_config_data', {}).get('team', {}).get('number')
+        team_number = session.get('team_number')
         user_email = session.get('user_email')
         metrics.log_event('onshape_import',
                          team_number=team_number,

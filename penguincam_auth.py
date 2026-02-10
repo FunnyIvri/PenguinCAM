@@ -235,11 +235,11 @@ class PenguinCAMAuth:
                 # Save credentials to session
                 self._save_credentials(creds)
                 
-                # Create session
+                # Create session (use google_ prefix to not conflict with Onshape auth)
                 session['authenticated'] = True
-                session['user_email'] = email
-                session['user_name'] = user_info.get('name')
-                session['user_picture'] = user_info.get('picture')
+                session['google_user_email'] = email
+                session['google_user_name'] = user_info.get('name')
+                session['google_user_picture'] = user_info.get('picture')
                 session.permanent = True
                 
                 # Clear OAuth state
