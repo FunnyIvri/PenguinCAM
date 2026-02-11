@@ -3310,7 +3310,7 @@ class FRCPostProcessor:
         if cut_to_length:
             gcode.append('')
             gcode.append('( === CUT TUBE TO LENGTH - PHASE 1 === )')
-            cut_gcode = self._generate_cut_to_length(tube_width, tube_height, tube_length, phase=1)
+            cut_gcode = self._generate_cut_to_length(tube_width, tube_height, tube_length, phase=1, square_end=square_end)
             gcode.extend(cut_gcode)
 
         # === PAUSE FOR FLIP ===
@@ -3366,7 +3366,7 @@ class FRCPostProcessor:
         if cut_to_length:
             gcode.append('')
             gcode.append('( === CUT TUBE TO LENGTH - PHASE 2 === )')
-            cut_gcode = self._generate_cut_to_length(tube_width, tube_height, tube_length, phase=2)
+            cut_gcode = self._generate_cut_to_length(tube_width, tube_height, tube_length, phase=2, square_end=square_end)
             gcode.extend(cut_gcode)
 
         # === END ===
@@ -3601,7 +3601,7 @@ class FRCPostProcessor:
         return self._offset_coordinate(line, 'Y', y_offset)
 
     def _generate_cut_to_length(self, tube_width: float, tube_height: float,
-                                 tube_length: float, phase: int) -> list[str]:
+                                 tube_length: float, phase: int, square_end: bool) -> list[str]:
         """
         Generate G-code to cut tube to length using arc clearing pattern.
 
@@ -3622,6 +3622,7 @@ class FRCPostProcessor:
             tube_height: Height of tube (Z dimension)
             tube_length: Desired tube length (Y dimension)
             phase: 1 (before flip) or 2 (after flip)
+            square_end: Whether the tube end was squared (affects Phase 1 offset)
 
         Returns:
             List of G-code lines
@@ -3639,15 +3640,18 @@ class FRCPostProcessor:
         finishing_depth_per_pass = passes['finishing_depth_per_pass']
 
         # Y offset for cut position
-        # Phase 1: +0.0625" to account for facing material removal from front
-        # Phase 2: 0 (coordinate system reset after flip)
+        # Phase 1: Add tube_facing_offset ONLY if square_end=True (material removed from front)
+        # Phase 2: No offset (coordinate system reset after flip)
         if phase == 1:
-            # Phase 1: Cut at tube_length + facing offset + tool radius compensation
-            y_cut = tube_length + self.tube_facing_offset + self.tool_radius
+            # Phase 1: Cut at tube_length + optional facing offset + tool radius compensation
+            if square_end:
+                y_cut = tube_length + self.tube_facing_offset + self.tool_radius
+            else:
+                y_cut = tube_length + self.tool_radius
             z_start = tube_height  # Top of tube (tube sits on sacrifice board at Z=0)
             gcode.append(f'( Cut to length at Y={y_cut:.4f}" [Phase 1: before flip] )')
         else:
-            # Phase 2: Cut at tube_length + tool radius compensation
+            # Phase 2: Cut at tube_length + tool radius compensation (no facing offset)
             y_cut = tube_length + self.tool_radius
             z_start = tube_height  # Top of tube
             gcode.append(f'( Cut to length at Y={y_cut:.4f}" [Phase 2: after flip] )')
