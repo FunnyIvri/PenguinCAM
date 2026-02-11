@@ -113,6 +113,35 @@
             <div class="step">
                 <div class="step-number">1</div>
                 <div class="step-content">
+                    <h3>Chipload-Based Feeds & Speeds Calculation</h3>
+                    <p><strong>Priority:</strong> High | <strong>Effort:</strong> High</p>
+                    <p>
+                        <strong>Current Problem:</strong> Feeds and speeds are specified directly in the config,
+                        which doesn't scale when changing tool sizes or flute counts. A 3mm end mill needs different
+                        feeds than a 6mm end mill, even in the same material.
+                    </p>
+                    <p>
+                        <strong>Proposed Solution:</strong> Specify ground-truth cutting parameters (chipload in inches/tooth,
+                        preferred RPM, stepdown as ratio of diameter) and calculate all derived values at runtime.
+                        The system would compute XY feed, ramp feed, and plunge feed based on tool diameter, flute count,
+                        material chipload, machine rigidity class, and engagement type (slotting vs clearing).
+                    </p>
+                    <p>
+                        <strong>Benefits:</strong> Settings automatically work for any tool size. More predictable results.
+                        Easier to understand and tune (chipload is the fundamental parameter machinists think about).
+                        Enables proper support for multi-flute tools.
+                    </p>
+                    <p>
+                        <strong>Impact:</strong> New config file format (version 3), refactored feed/speed calculations
+                        throughout postprocessor, updated UI to show calculated vs specified values, migration tooling for
+                        existing configs. Foundation for the tool library feature.
+                    </p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
                     <h3>Multiple Parts Per Job</h3>
                     <p><strong>Priority:</strong> Medium | <strong>Effort:</strong> Medium-High</p>
                     <p>
@@ -125,7 +154,7 @@
             </div>
 
             <div class="step">
-                <div class="step-number">2</div>
+                <div class="step-number">3</div>
                 <div class="step-content">
                     <h3>Team-Specific Tool Library</h3>
                     <p><strong>Priority:</strong> Medium | <strong>Effort:</strong> High</p>
@@ -135,12 +164,13 @@
                         performance characteristics - a 2-flute tool can typically run faster feeds than a 1-flute.
                         Tool-specific settings could use multipliers on the base material feeds/speeds, or define
                         complete overrides. Would affect UI (tool selection dropdown), config format, and postprocessor.
+                        Works best with chipload-based calculation system.
                     </p>
                 </div>
             </div>
 
             <div class="step">
-                <div class="step-number">3</div>
+                <div class="step-number">4</div>
                 <div class="step-content">
                     <h3>Per-Team Branding</h3>
                     <p><strong>Priority:</strong> Low | <strong>Effort:</strong> Medium</p>
@@ -152,7 +182,7 @@
             </div>
 
             <div class="step">
-                <div class="step-number">4</div>
+                <div class="step-number">5</div>
                 <div class="step-content">
                     <h3>Additional Cloud Storage</h3>
                     <p><strong>Priority:</strong> Low | <strong>Effort:</strong> Medium</p>
@@ -164,7 +194,7 @@
             </div>
 
             <div class="step">
-                <div class="step-number">5</div>
+                <div class="step-number">6</div>
                 <div class="step-content">
                     <h3>G41/G42 Tool Compensation</h3>
                     <p><strong>Priority:</strong> Low | <strong>Effort:</strong> Medium</p>
@@ -177,7 +207,7 @@
             </div>
 
             <div class="step">
-                <div class="step-number">6</div>
+                <div class="step-number">7</div>
                 <div class="step-content">
                     <h3>Asymmetric Tube Patterns</h3>
                     <p><strong>Priority:</strong> Medium | <strong>Effort:</strong> High</p>
@@ -189,7 +219,7 @@
             </div>
 
             <div class="step">
-                <div class="step-number">7</div>
+                <div class="step-number">8</div>
                 <div class="step-content">
                     <h3>Interactive Part Layout Interface</h3>
                     <p><strong>Priority:</strong> Medium | <strong>Effort:</strong> High</p>
@@ -203,7 +233,7 @@
             </div>
 
             <div class="step">
-                <div class="step-number">8</div>
+                <div class="step-number">9</div>
                 <div class="step-content">
                     <h3>Intelligent Pocket Machining Strategy</h3>
                     <p><strong>Priority:</strong> Medium | <strong>Effort:</strong> Medium-High</p>
@@ -217,7 +247,7 @@
             </div>
 
             <div class="step">
-                <div class="step-number">9</div>
+                <div class="step-number">10</div>
                 <div class="step-content">
                     <h3>Show More Gcode Text During Toolpath Preview</h3>
                     <p><strong>Priority:</strong> Low | <strong>Effort:</strong> Low</p>
