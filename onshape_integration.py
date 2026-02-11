@@ -1249,13 +1249,37 @@ class OnshapeClient:
 
         # Calculate part thickness from depth bins
         # Depths are signed distances from reference (top) face
-        # Top face ≈ 0, bottom face ≈ -thickness
+        # Reference face ≈ 0, bottom face ≈ -thickness (or +thickness if flipped)
         depths = list(depth_bins.keys())
         if depths:
             max_depth = max(depths)  # Shallowest (closest to reference, typically ~0)
             min_depth = min(depths)  # Deepest (bottom face, typically negative)
             detected_thickness = max_depth - min_depth
             log(f"\n📏 Detected part thickness: {detected_thickness:.4f}\" (from Z={max_depth:+.4f}\" to Z={min_depth:+.4f}\")")
+
+            # COORDINATE SYSTEM TRANSFORMATION
+            # Transform from "distance from reference face" to "height above sacrifice board"
+            # Old: reference face = 0, bottom face = -thickness (or vice versa)
+            # New: bottom (on sacrifice board) = 0, top = thickness
+            log(f"\n🔄 Transforming coordinate system to Z=0 at sacrifice board")
+            transformed_bins = {}
+            transformed_metadata = {}
+            transformed_contents = {}
+
+            for depth, faces in depth_bins.items():
+                # Transform: new_z = old_z - min_depth
+                # This makes bottom (min_depth) -> 0 and top (max_depth) -> thickness
+                new_depth = depth - min_depth
+                log(f"   Z={depth:+.4f}\" → Z={new_depth:.4f}\"")
+                transformed_bins[new_depth] = faces
+                transformed_contents[new_depth] = dxf_contents[depth]
+                if depth in depth_metadata:
+                    transformed_metadata[new_depth] = depth_metadata[depth]
+
+            # Replace with transformed values
+            depth_bins = transformed_bins
+            dxf_contents = transformed_contents
+            depth_metadata = transformed_metadata
         else:
             detected_thickness = None
             log("\n⚠️  Could not detect part thickness (no depth bins)")

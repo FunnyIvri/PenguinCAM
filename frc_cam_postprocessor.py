@@ -1532,15 +1532,16 @@ class FRCPostProcessor:
         # Sort layers: deepest first
         sorted_layers = sorted(self.layer_data.items(), key=lambda x: x[1]['depth'])
 
-        # Find the bottom face layer (should be at Z = -material_thickness)
-        # If no layer exists at that depth, treat all layers as depth layers
-        expected_bottom_depth = -self.material_thickness
+        # Find the bottom face layer
+        # NEW COORDINATE SYSTEM: Z=0 is sacrifice board surface
+        # Bottom face should be at Z ≈ 0, top face at Z ≈ material_thickness
+        expected_bottom_depth = 0.0
         tolerance = 0.01  # 0.01" tolerance for matching bottom face
 
         bottom_layer = None
         bottom_layer_name = None
 
-        # Look for a layer at the expected bottom depth
+        # Look for a layer at the expected bottom depth (Z ≈ 0)
         for layer_name, layer_info in self.layer_data.items():
             if abs(layer_info['depth'] - expected_bottom_depth) < tolerance:
                 bottom_layer = (layer_name, layer_info)
@@ -1549,33 +1550,35 @@ class FRCPostProcessor:
                 break
 
         if not bottom_layer:
-            # No bottom face found - use deepest layer for perimeter extraction only
-            # ALL layers (including deepest) are treated as depth layers for pockets/holes
-            deepest_layer = min(self.layer_data.items(), key=lambda x: x[1]['depth'])
-            bottom_layer = deepest_layer
-            bottom_layer_name = deepest_layer[0]
+            # No bottom face found - use lowest Z layer for perimeter extraction only
+            # ALL layers (including lowest) are treated as depth layers for pockets/holes
+            lowest_layer = min(self.layer_data.items(), key=lambda x: x[1]['depth'])
+            bottom_layer = lowest_layer
+            bottom_layer_name = lowest_layer[0]
             print(f"⚠️  No bottom face at Z={expected_bottom_depth:.4f}\" found in DXF")
-            print(f"   Using deepest layer {bottom_layer_name} at Z={deepest_layer[1]['depth']:.4f}\" for perimeter outline")
-            print(f"   All layers (including deepest) will be processed as depth layers")
+            print(f"   Using lowest layer {bottom_layer_name} at Z={lowest_layer[1]['depth']:.4f}\" for perimeter outline")
+            print(f"   All layers (including lowest) will be processed as depth layers")
 
         # Separate layers: pocket layers (excluding bottom face and top surface)
-        # - Bottom face layer (at -material_thickness): used for perimeter + through-holes/pockets
-        # - Top surface layer (Z ≈ 0): reference geometry, not machined
-        # - Middle layers (negative Z): actual pockets/grooves to machine at specified depth
+        # - Bottom face layer (at Z ≈ 0): used for perimeter + through-holes/pockets
+        # - Top surface layer (at Z ≈ material_thickness): reference geometry, not machined
+        # - Middle layers (0 < Z < material_thickness): actual pockets/grooves to machine at specified depth
         # - If no true bottom face exists, ALL layers become depth layers
         has_true_bottom = abs(bottom_layer[1]['depth'] - expected_bottom_depth) < tolerance
 
         if has_true_bottom:
             # Exclude bottom face from depth layers
+            # Process layers where 0 < Z < material_thickness (intermediate pockets)
             depth_layers = [
                 item for item in sorted_layers
-                if item[0] != bottom_layer_name and item[1]['depth'] < -0.01  # Skip Z ≈ 0
+                if item[0] != bottom_layer_name and 0.01 < item[1]['depth'] < self.material_thickness - 0.01
             ]
         else:
-            # Include all layers (including "bottom") as depth layers
+            # Include all valid layers as depth layers
+            # Process layers where 0 < Z < material_thickness
             depth_layers = [
                 item for item in sorted_layers
-                if item[1]['depth'] < -0.01  # Skip Z ≈ 0 only
+                if 0.01 < item[1]['depth'] < self.material_thickness - 0.01
             ]
 
         print(f"\nProcessing order:")
@@ -1585,7 +1588,8 @@ class FRCPostProcessor:
 
         # Report skipped layers
         for layer_name, layer_info in sorted_layers:
-            if layer_name != bottom_layer_name and layer_info['depth'] >= -0.01:
+            # Skip if it's the bottom layer (handled separately) OR if it's at/above material thickness (top reference)
+            if layer_name != bottom_layer_name and layer_info['depth'] >= self.material_thickness - 0.01:
                 print(f"  → Skipping {layer_name} (Z={layer_info['depth']:.4f}\") - top surface reference geometry")
 
         if has_true_bottom:
@@ -1644,11 +1648,11 @@ class FRCPostProcessor:
             self.perimeter = None
             self.pockets = self.polylines.copy() if self.polylines else []
 
-            # Convert DXF layer depth (CAD Z, where 0=top) to machine Z (where 0=sacrifice board)
-            # Machine Z = material_thickness + CAD_Z - sacrifice_depth
-            # Example: 0.5" thick, groove at CAD Z=-0.243" → machine Z = 0.5 + (-0.243) - 0.008 = 0.249"
+            # NEW COORDINATE SYSTEM: DXF depths are already in machine coordinates
+            # Z=0 is sacrifice board in both DXF and G-code
+            # Pocket at DXF Z=0.050" → cut to machine Z=0.050"
             saved_cut_depth = self.cut_depth
-            self.cut_depth = self.material_thickness + depth - self.sacrifice_board_depth
+            self.cut_depth = depth
 
             # Generate toolpaths at this depth
             if self.holes:
