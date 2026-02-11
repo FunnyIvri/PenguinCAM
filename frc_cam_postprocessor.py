@@ -1661,7 +1661,8 @@ class FRCPostProcessor:
                 for i, hole in enumerate(self.holes, 1):
                     center = hole['center']
                     diameter = hole['diameter']
-                    gcode.extend(self._generate_hole_gcode(center[0], center[1], diameter))
+                    needs_peck = hole.get('needs_peck_drill', False)
+                    gcode.extend(self._generate_hole_gcode(center[0], center[1], diameter, needs_peck_drill=needs_peck))
 
             if self.pockets:
                 gcode.append(f"(Layer {layer_name}: {len(self.pockets)} pockets)")
@@ -1703,8 +1704,9 @@ class FRCPostProcessor:
                 for i, hole in enumerate(self.holes, 1):
                     center = hole['center']
                     diameter = hole['diameter']
+                    needs_peck = hole.get('needs_peck_drill', False)
                     gcode.append(f"(Hole {i} - {diameter:.3f}\" diameter)")
-                    gcode.extend(self._generate_hole_gcode(center[0], center[1], diameter))
+                    gcode.extend(self._generate_hole_gcode(center[0], center[1], diameter, needs_peck_drill=needs_peck))
                     gcode.append("")
 
             if self.pockets:
