@@ -1726,6 +1726,27 @@ class OnshapeSessionManager:
 
         return client
 
+    def update_session_tokens(self, client):
+        """
+        Update session tokens after potential refresh.
+
+        Call this after making API calls with a client to ensure
+        refreshed tokens are saved back to the session.
+
+        Args:
+            client: OnshapeClient that may have refreshed tokens
+        """
+        if not client:
+            return
+
+        # Update session with potentially-refreshed tokens
+        session['onshape_tokens'] = {
+            'access_token': client.access_token,
+            'refresh_token': client.refresh_token,
+            'expires_at': client.token_expires.isoformat() if client.token_expires else None,
+            'created': session.get('onshape_tokens', {}).get('created', datetime.now().isoformat())
+        }
+
     def clear_session(self, user_id):
         """
         Remove Onshape tokens from Flask session.

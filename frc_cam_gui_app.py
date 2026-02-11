@@ -1139,6 +1139,9 @@ def onshape_status():
             # Try to get user info to verify connection
             user_info = client.get_user_info()
 
+            # Save potentially-refreshed tokens back to session
+            session_manager.update_session_tokens(client)
+
             return jsonify({
                 'available': True,
                 'connected': True,
@@ -1258,6 +1261,9 @@ def debug_onshape_faces():
         face_id, body_id_result, part_name, normal = client.auto_select_top_face(
             document_id, workspace_id, element_id, body_id, faces_data
         )
+
+        # Save potentially-refreshed tokens back to session
+        session_manager.update_session_tokens(client)
 
         return jsonify({
             'success': True,
@@ -1436,7 +1442,17 @@ def onshape_import():
             try:
                 # First, try to list all faces for debugging
                 faces_data = client.list_faces(document_id, workspace_id, element_id)
-                body_count = len(faces_data.get('bodies', [])) if faces_data else 0
+
+                if not faces_data:
+                    error_msg = "Failed to retrieve data from Onshape. Your authentication token may have expired. Please re-authenticate with Onshape."
+                    log(f"❌ {error_msg}")
+                    return render_template('index.html',
+                                         error_message=error_msg,
+                                         from_onshape=True,
+                                         using_default_config=session.get('using_default_config', False),
+                                         detected_thickness=None), 401
+
+                body_count = len(faces_data.get('bodies', []))
                 log(f"📊 Found {body_count} bodies/parts in document")
 
                 # If multiple parts and no bodyId specified, show part selection modal
@@ -1448,6 +1464,15 @@ def onshape_import():
 
                     # Get body faces using cached data to avoid duplicate API call
                     bodies_with_faces = client.get_body_faces(document_id, workspace_id, element_id, cached_faces_data=faces_data)
+
+                    if not bodies_with_faces:
+                        error_msg = "Failed to retrieve body/face data from Onshape. Your authentication may have expired."
+                        log(f"❌ {error_msg}")
+                        return render_template('index.html',
+                                             error_message=error_msg,
+                                             from_onshape=True,
+                                             using_default_config=session.get('using_default_config', False),
+                                             detected_thickness=None), 401
 
                     # Find the largest part by top face area
                     largest_body_id = None
@@ -1549,6 +1574,11 @@ def onshape_import():
                 log("⚠️  No face normal available, fetching...")
                 faces_data = client.list_faces(document_id, workspace_id, element_id)
 
+                if not faces_data:
+                    error_msg = "Failed to retrieve face data from Onshape. Your authentication token may have expired. Please re-authenticate with Onshape."
+                    log(f"❌ {error_msg}")
+                    return jsonify({'error': error_msg}), 401
+
                 # Find the reference face
                 reference_face = None
 
@@ -1594,6 +1624,12 @@ def onshape_import():
 
             # Get reference origin from face
             faces_data = client.list_faces(document_id, workspace_id, element_id)
+
+            if not faces_data:
+                error_msg = "Failed to retrieve face data from Onshape. Your authentication token may have expired. Please re-authenticate with Onshape."
+                log(f"❌ {error_msg}")
+                return jsonify({'error': error_msg}), 401
+
             reference_origin = None
             for body in faces_data.get('bodies', []):
                 if export_body_id and body.get('id') != export_body_id:
@@ -1665,6 +1701,9 @@ def onshape_import():
                 log(f"   ⚠️  Document API returned None")
         except Exception as e:
             log(f"   ⚠️  Document API failed (will use part name only): {e}")
+
+        # Save potentially-refreshed tokens back to session
+        session_manager.update_session_tokens(client)
 
         # Build filename from whatever we have
         suggested_filename = generate_onshape_filename(doc_name, part_name_from_body)
@@ -1876,6 +1915,9 @@ def onshape_save_dxf():
                 log(f"📝 Document name: {doc_name}")
         except Exception as e:
             log(f"⚠️  Could not get document name: {e}")
+
+        # Save potentially-refreshed tokens back to session
+        session_manager.update_session_tokens(client)
 
         base_filename = generate_onshape_filename(doc_name, part_name_from_body)
 
