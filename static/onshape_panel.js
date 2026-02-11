@@ -10,6 +10,7 @@
     const buttonGroup = document.getElementById('buttonGroup');
     const sendBtn = document.getElementById('sendToPenguinCAM');
     const multilayerCheckbox = document.getElementById('multilayerMode');
+    const modeLabel = document.getElementById('modeLabel');
     const modeHint = document.getElementById('modeHint');
 
     // Onshape context from template
@@ -70,6 +71,7 @@
 
         if (isMultilayer) {
             // 2.5D mode - stock must match CAD
+            modeLabel.textContent = 'Multi-layer (2.5D) mode';
             modeHint.textContent = 'Stock thickness must match CAD part thickness';
             // Update instruction if no face selected
             if (!selectedFaceId && instruction.style.display !== 'none') {
@@ -78,6 +80,7 @@
             }
         } else {
             // 2D mode - any stock works
+            modeLabel.textContent = 'Single-layer (2D) mode';
             modeHint.textContent = 'Any stock thickness works - cutting a flat pattern only';
             // Update instruction if no face selected
             if (!selectedFaceId && instruction.style.display !== 'none') {
