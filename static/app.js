@@ -305,9 +305,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Handle material type selection - show/hide tube parameters
         materialSelect.addEventListener('change', (e) => {
             const isAluminumTube = e.target.value === 'aluminum_tube';
-            if (tubeParams) {
-                tubeParams.style.display = isAluminumTube ? 'block' : 'none';
-            }
 
             // Show/hide warning for incomplete materials
             const materialWarning = document.getElementById('materialWarning');
@@ -317,11 +314,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 materialWarning.style.display = isIncomplete ? 'block' : 'none';
             }
 
-            // Update thickness label, default value, and hide tabs for aluminum tube
+            // Update thickness label and default value for aluminum tube
             const thicknessGroup = document.getElementById('thickness')?.closest('.param-group');
             const thicknessLabel = thicknessGroup?.querySelector('label');
             const thicknessInput = document.getElementById('thickness');
-            const tabsGroup = document.getElementById('tabSpacing')?.closest('.param-group');
 
             if (thicknessLabel && thicknessInput) {
                 if (isAluminumTube) {
@@ -341,8 +337,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Hide tabs for aluminum tube (not used)
-            if (tabsGroup) tabsGroup.style.display = isAluminumTube ? 'none' : 'block';
+            // Update form visibility (tube params, tabs, etc.) based on mode
+            updateFormVisibility();
         });
 
         // Handle machine selection change
@@ -887,6 +883,60 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         /**
+         * Check if DXF has multiple depth layers (2.5D mode)
+         * Returns true if there are 2+ layers with different Z depths
+         */
+        function isMultiDepthMode() {
+            if (!dxfGeometry || !dxfGeometry.layers) return false;
+
+            const depthValues = new Set();
+            for (const [layerName, layerInfo] of dxfGeometry.layers) {
+                if (layerInfo.depth !== null) {
+                    depthValues.add(layerInfo.depth);
+                }
+            }
+
+            // Multi-depth mode if we have 2 or more different Z depths
+            return depthValues.size >= 2;
+        }
+
+        /**
+         * Update form visibility based on current mode (2D vs 2.5D, tubing vs plate)
+         */
+        function updateFormVisibility() {
+            const materialSelect = document.getElementById('material');
+            const tubeParams = document.getElementById('tubeParams');
+            const tabsGroup = document.getElementById('tabSpacing')?.closest('.param-group');
+            const isAluminumTube = materialSelect.value === 'aluminum_tube';
+            const isMultiDepth = isMultiDepthMode();
+
+            // Hide/show aluminum_tube option based on 2.5D mode
+            const tubeOption = Array.from(materialSelect.options).find(opt => opt.value === 'aluminum_tube');
+            if (tubeOption) {
+                if (isMultiDepth) {
+                    tubeOption.style.display = 'none';
+                    // If aluminum_tube was selected, switch to default
+                    if (isAluminumTube) {
+                        materialSelect.value = 'plywood';
+                        materialSelect.dispatchEvent(new Event('change'));
+                    }
+                } else {
+                    tubeOption.style.display = '';
+                }
+            }
+
+            // Hide tube parameters unless aluminum_tube is selected
+            if (tubeParams) {
+                tubeParams.style.display = isAluminumTube ? 'block' : 'none';
+            }
+
+            // Hide tabs for: aluminum tube OR 2.5D mode
+            if (tabsGroup) {
+                tabsGroup.style.display = (isAluminumTube || isMultiDepth) ? 'none' : 'block';
+            }
+        }
+
+        /**
          * Organize DXF entities by layer and assign colors
          * Returns: { layers: Map<layerName, {depth, color, entities}>, layerOrder: [layerName] }
          */
@@ -1054,10 +1104,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log(`  Width: ${dxfBounds.width.toFixed(4)}", Height: ${dxfBounds.height.toFixed(4)}"`);
                 console.log(`  Total entities processed: ${dxf.entities ? dxf.entities.length : 0}`);
 
+                // Update form visibility based on detected layers (2D vs 2.5D)
+                updateFormVisibility();
+
                 // Show mode toggle and switch to setup mode
                 document.getElementById('modeToggle').style.display = 'flex';
                 switchMode('setup');
-                
+
             } catch (error) {
                 console.error('DXF parsing error:', error);
                 // Try manual fallback
@@ -1291,6 +1344,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 centerX: (minX + maxX) / 2,
                 centerY: (minY + maxY) / 2
             };
+
+            // Update form visibility based on detected layers (2D vs 2.5D)
+            updateFormVisibility();
 
             document.getElementById('modeToggle').style.display = 'flex';
             switchMode('setup');
