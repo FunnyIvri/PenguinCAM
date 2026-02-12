@@ -103,82 +103,48 @@
         const data = event.data;
         console.log('Received message:', data);
 
-        if (data.messageName === 'SELECTION') {
-            handleSelection(data);
+        if (data.messageName === 'REQUESTED_SELECTION') {
+            handleRequestedSelection(data);
         }
     }
 
     /**
-     * Handle selection change from Onshape
+     * Handle requested selection response from Onshape
      */
-    function handleSelection(data) {
+    function handleRequestedSelection(data) {
         const selections = data.selections || [];
-        console.log('Selection changed:', selections);
+        const status = data.status || {};
+        console.log('Requested selection response:', selections, 'Status:', status);
 
-        // Look for FACE selection
-        const faceSelection = selections.find(s =>
-            s.entityType === 'FACE' && s.selectionType === 'ENTITY'
-        );
+        // Check status code
+        if (status.statusCode === 'SUCCESS' && selections.length > 0) {
+            // User successfully selected a face
+            const faceSelection = selections[0];
 
-        if (faceSelection) {
-            // Valid face selected
             selectedFaceId = faceSelection.selectionId;
             selectedPartId = faceSelection.partId || null;
 
             // Update UI - hide instruction, show button
             instruction.style.display = 'none';
             buttonGroup.style.display = 'flex';
-
-            // Enable button
             sendBtn.disabled = false;
 
             console.log('✓ Face selected:', selectedFaceId, 'Part:', selectedPartId, 'Full selection:', faceSelection);
+        } else if (status.statusCode === 'PENDING') {
+            // Still waiting for selection
+            instruction.innerHTML = 'Select a face to export';
+            instruction.style.color = '';
+            instruction.style.display = 'block';
+            buttonGroup.style.display = 'none';
+            sendBtn.disabled = true;
         } else {
-            // No valid face - reset state
+            // No valid selection or cancelled
             selectedFaceId = null;
             selectedPartId = null;
             buttonGroup.style.display = 'none';
             sendBtn.disabled = true;
-
-            // Check for common mistakes and show helpful message
-            if (selections.length === 0) {
-                // Nothing selected
-                instruction.innerHTML = 'Select a face to export';
-                instruction.style.color = '';
-            } else {
-                // Something selected, but not a face - provide helpful guidance
-                const selection = selections[0];
-                const entityType = selection.entityType;
-
-                console.log('✗ Invalid selection:', entityType);
-
-                if (entityType && entityType.startsWith('SKETCH')) {
-                    // User selected part of a sketch
-                    instruction.innerHTML = '⚠️ You selected a sketch element.<br>Please select a <strong>face of a solid part</strong> instead.';
-                    instruction.style.color = '#FBB515';
-                } else if (entityType === 'EDGE') {
-                    // User selected an edge
-                    instruction.innerHTML = '⚠️ You selected an edge.<br>Please select a <strong>flat face</strong> instead.';
-                    instruction.style.color = '#FBB515';
-                } else if (entityType === 'VERTEX') {
-                    // User selected a vertex/point
-                    instruction.innerHTML = '⚠️ You selected a vertex.<br>Please select a <strong>flat face</strong> instead.';
-                    instruction.style.color = '#FBB515';
-                } else if (entityType === 'BODY') {
-                    // User selected entire body
-                    instruction.innerHTML = '⚠️ You selected an entire body.<br>Please select a <strong>single flat face</strong> instead.';
-                    instruction.style.color = '#FBB515';
-                } else if (entityType === 'MATE_CONNECTOR') {
-                    // User selected a mate connector
-                    instruction.innerHTML = '⚠️ You selected a mate connector.<br>Please select a <strong>flat face</strong> instead.';
-                    instruction.style.color = '#FBB515';
-                } else {
-                    // Unknown entity type
-                    instruction.innerHTML = `⚠️ Invalid selection (${entityType}).<br>Please select a <strong>flat face of a solid part</strong>.`;
-                    instruction.style.color = '#FBB515';
-                }
-            }
-
+            instruction.innerHTML = 'Select a face to export';
+            instruction.style.color = '';
             instruction.style.display = 'block';
         }
     }
