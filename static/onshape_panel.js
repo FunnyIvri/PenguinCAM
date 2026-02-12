@@ -37,21 +37,21 @@
         // Listen for messages from Onshape
         window.addEventListener('message', handleMessage);
 
-        // Request current selection state (in case face is already selected)
-        // Onshape will respond with a SELECTION message
-        // Do this AFTER listener is set up so we can receive the response
-        /* DISABLED: this doesn't do what we'd hoped it would do
+        // Request a face selection with filters to ensure only solid faces can be selected
+        // This prevents users from accidentally selecting faces from drawings/sketches
         const selectionMessage = {
             messageName: 'requestSelection',
-            messageId: 'penguincam-init-' + Date.now(), // Unique ID for this request
+            messageId: 'penguincam-init-' + Date.now(),
             documentId: context.documentId,
             workspaceId: context.workspaceId,
             elementId: context.elementId,
-            entityTypeSpecifier: ['FACE'] // Array of entity types we're looking for
+            filterType: 'simple',
+            entityTypeSpecifier: ['FACE'],      // Only faces
+            bodyTypeSpecifier: ['SOLID'],       // Only from solid bodies (not drawings)
+            requiredSelectionCount: 1           // Exactly one face
         };
-        // window.parent.postMessage(selectionMessage, '*');
-        // console.log('Requested current selection:', selectionMessage);
-        */
+        window.parent.postMessage(selectionMessage, '*');
+        console.log('Requested face selection with filters:', selectionMessage);
 
         // Set up button handlers
         sendBtn.addEventListener('click', handleSendToPenguinCAM);
