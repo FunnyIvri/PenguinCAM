@@ -1823,10 +1823,12 @@ class FRCPostProcessor:
         # Use bottom face geometry
         self.circles = layer_info['circles']
         self.polylines = layer_info['polylines']
-        self.classify_holes()
 
-        # Identify perimeter from bottom face (should be the largest polyline)
+        # Identify perimeter from bottom face (must come before classify_holes to remove perimeter circles)
         self.identify_perimeter_and_pockets()
+
+        # Classify remaining circles as holes (after perimeter circles removed)
+        self.classify_holes()
 
         # Generate holes and pockets ONLY if this is a true bottom face (through-cuts)
         # Otherwise they were already processed as depth layers
