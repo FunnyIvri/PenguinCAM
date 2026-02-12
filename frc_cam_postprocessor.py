@@ -1152,30 +1152,66 @@ class FRCPostProcessor:
 
     def identify_perimeter_and_pockets(self):
         """Identify the outer perimeter and any inner pockets"""
-        if not self.polylines:
+        # Collect all closed paths: polylines OR circles (converted to polylines)
+        # Only use circles as perimeter candidates if there are NO polylines
+        all_paths = []
+        circle_to_path_map = {}  # Track which circles were converted to paths
+
+        # Add existing polylines
+        polyline_count = 0
+        if self.polylines:
+            all_paths.extend(self.polylines)
+            polyline_count = len(self.polylines)
+
+        # Convert circles to polylines ONLY if there are no existing polylines
+        # (e.g., for a washer with just two concentric circles)
+        if not self.polylines and hasattr(self, 'circles') and self.circles:
+            for i, circle in enumerate(self.circles):
+                try:
+                    cx, cy = circle['center']
+                    r = circle.get('radius') or (circle.get('diameter', 0) / 2)
+                    if r <= 0:
+                        continue
+                    # Create polyline from circle (50 points)
+                    points = []
+                    for j in range(50):
+                        angle = (j / 50) * 2 * math.pi
+                        x = cx + r * math.cos(angle)
+                        y = cy + r * math.sin(angle)
+                        points.append((x, y))
+                    path_idx = len(all_paths)
+                    all_paths.append(points)
+                    # Map path index to circle index
+                    circle_to_path_map[path_idx] = i
+                except (KeyError, TypeError):
+                    # Skip circles with missing/invalid data
+                    continue
+
+        if not all_paths:
             self.perimeter = None
             self.pockets = []
             return
-        
-        # Convert to Shapely polygons
+
+        # Convert to Shapely polygons, tracking path index
         polygons = []
-        for points in self.polylines:
+        for path_idx, points in enumerate(all_paths):
             try:
                 poly = Polygon(points)
                 if poly.is_valid:
-                    polygons.append((poly, points))
+                    polygons.append((poly, points, path_idx))
             except:
                 pass
-        
+
         if not polygons:
             self.perimeter = None
             self.pockets = []
             return
-        
+
         # Find the largest polygon (perimeter)
         polygons.sort(key=lambda x: x[0].area, reverse=True)
         candidate_perimeter = polygons[0][1]  # Get the original points
         candidate_poly = polygons[0][0]
+        perimeter_path_idx = polygons[0][2]
 
         # Validate that the perimeter is reasonable
         # If we have holes, the perimeter should be significantly larger than the bounding box of holes
@@ -1189,15 +1225,35 @@ class FRCPostProcessor:
             # If the candidate perimeter is < 10% of the bounding box area, it's probably not the real perimeter
             perimeter_area = candidate_poly.area
             if perimeter_area < 0.1 * bbox_area:
-                error_msg = f"Perimeter too small ({perimeter_area:.2f} sq in) compared to part bounding box ({bbox_area:.2f} sq in). DXF may be missing perimeter outline geometry."
-                print(f"\n❌ ERROR: {error_msg}")
-                self.errors.append(error_msg)
+                # Only report as error if we had actual polylines (not just converted circles)
+                # If we only converted circles and the largest isn't big enough, silently skip perimeter
+                if polyline_count > 0:
+                    error_msg = f"Perimeter too small ({perimeter_area:.2f} sq in) compared to part bounding box ({bbox_area:.2f} sq in). DXF may be missing perimeter outline geometry."
+                    print(f"\n❌ ERROR: {error_msg}")
+                    self.errors.append(error_msg)
                 self.perimeter = None
                 self.pockets = []
                 return
 
         self.perimeter = candidate_perimeter
         self.pockets = [p[1] for p in polygons[1:]]
+
+        # Remove circles that were used as perimeter or pockets from self.circles
+        circles_to_remove = set()
+
+        # Check if perimeter came from a circle
+        if perimeter_path_idx in circle_to_path_map:
+            circles_to_remove.add(circle_to_path_map[perimeter_path_idx])
+
+        # Check if any pockets came from circles
+        for poly, points, path_idx in polygons[1:]:
+            if path_idx in circle_to_path_map:
+                circles_to_remove.add(circle_to_path_map[path_idx])
+
+        # Remove circles in reverse order to avoid index issues
+        if circles_to_remove:
+            self.circles = [c for i, c in enumerate(self.circles) if i not in circles_to_remove]
+            print(f"  Removed {len(circles_to_remove)} circle(s) that were identified as perimeter/pockets")
 
         print(f"\nIdentified perimeter and {len(self.pockets)} pockets")
 
