@@ -484,12 +484,13 @@ class FRCPostProcessor:
 
             print(f"    Found {len(layer_circles)} circles and {len(layer_polylines)} closed paths at this depth")
 
-        # For compatibility, set top-level circles/polylines to the shallowest layer
+        # For compatibility, set top-level circles/polylines to COPIES of the shallowest layer
         # (This allows classify_loops to work as-is for single-layer operations)
+        # IMPORTANT: Use copy() to avoid double-transformation when transform_coordinates is called
         if self.layer_data:
             top_layer = sorted_layers[0][0]  # Shallowest layer
-            self.circles = self.layer_data[top_layer]['circles']
-            self.polylines = self.layer_data[top_layer]['polylines']
+            self.circles = [circle.copy() for circle in self.layer_data[top_layer]['circles']]
+            self.polylines = [polyline[:] for polyline in self.layer_data[top_layer]['polylines']]
 
     def _chain_entities_to_paths(self, lines, arcs, splines, unclosed_polylines=None):
         """
