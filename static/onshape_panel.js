@@ -121,32 +121,6 @@
     }
 
     /**
-     * Request highlighting of the current selection
-     * This keeps the selected face visually highlighted while waiting for next selection
-     */
-    function highlightCurrentSelection() {
-        if (!currentSelection) return;
-
-        const highlightMessage = {
-            messageName: 'requestSelectionHighlight',
-            messageId: 'penguincam-highlight-' + Date.now(),
-            documentId: context.documentId,
-            workspaceId: context.workspaceId,
-            elementId: context.elementId,
-            selections: [
-                {
-                    selectionType: currentSelection.selectionType,
-                    selectionId: currentSelection.selectionId,
-                    entityType: currentSelection.entityType,
-                    workspaceMicroversionId: currentSelection.workspaceMicroversionId
-                }
-            ]
-        };
-        window.parent.postMessage(highlightMessage, '*');
-        console.log('Requested highlight for current selection:', highlightMessage);
-    }
-
-    /**
      * Handle requested selection response from Onshape
      */
     function handleRequestedSelection(data) {
@@ -156,12 +130,12 @@
 
         // Check status code
         if (status.statusCode === 'SUCCESS' && selections.length > 0) {
-            // User successfully selected a face
+            // User successfully selected a face (with filters enforced by Onshape)
             const faceSelection = selections[0];
 
             selectedFaceId = faceSelection.selectionId;
             selectedPartId = faceSelection.partId || null;
-            currentSelection = faceSelection;  // Store full selection for highlighting
+            currentSelection = faceSelection;
 
             // Update UI - hide instruction, show button
             instruction.style.display = 'none';
@@ -169,33 +143,13 @@
             sendBtn.disabled = false;
 
             console.log('✓ Face selected:', selectedFaceId, 'Part:', selectedPartId, 'Full selection:', faceSelection);
-
-            // Immediately request another selection so user can change their mind
-            // This creates a continuous loop where we're always ready for the next face
-            requestFaceSelection();
         } else if (status.statusCode === 'PENDING') {
-            // Still waiting for selection - keep current state if we have one
-            if (currentSelection) {
-                // We already have a selection - highlight it so user knows what's selected
-                highlightCurrentSelection();
-            } else {
-                // No selection yet - show instruction
-                instruction.innerHTML = 'Select a face to export';
-                instruction.style.color = '';
-                instruction.style.display = 'block';
-                buttonGroup.style.display = 'none';
-                sendBtn.disabled = true;
-            }
-        } else {
-            // No valid selection or cancelled
-            selectedFaceId = null;
-            selectedPartId = null;
-            currentSelection = null;
-            buttonGroup.style.display = 'none';
-            sendBtn.disabled = true;
+            // Still waiting for selection
             instruction.innerHTML = 'Select a face to export';
             instruction.style.color = '';
             instruction.style.display = 'block';
+            buttonGroup.style.display = 'none';
+            sendBtn.disabled = true;
         }
     }
 
@@ -229,7 +183,7 @@
 
     /**
      * Handle "Send to PenguinCAM" button
-     * Opens full PenguinCAM interface in new window
+     * Opens full PenguinCAM interface in new window and requests another selection
      */
     function handleSendToPenguinCAM() {
         const url = buildUrl('/onshape/import');
@@ -237,6 +191,10 @@
 
         // Open in new tab (without window features to make it a tab, not popup)
         window.open(url, '_blank');
+
+        // Immediately request another face selection for the next operation
+        // This creates a select-then-send workflow
+        requestFaceSelection();
     }
 
     // Initialize when DOM is ready
