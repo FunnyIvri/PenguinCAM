@@ -1236,19 +1236,28 @@ class FRCPostProcessor:
                 return
 
         self.perimeter = candidate_perimeter
-        self.pockets = [p[1] for p in polygons[1:]]
 
-        # Remove circles that were used as perimeter or pockets from self.circles
+        # For circles-as-perimeter (no polylines), don't treat other circles as pockets
+        # They should remain as holes. Only actual polylines can be pockets.
+        if polyline_count > 0:
+            # Normal case: we have polylines, add remaining ones as pockets
+            self.pockets = [p[1] for p in polygons[1:]]
+        else:
+            # Circles-only case (like a washer): no pockets, keep inner circles as holes
+            self.pockets = []
+
+        # Remove circles that were used as perimeter from self.circles
         circles_to_remove = set()
 
-        # Check if perimeter came from a circle
+        # Check if perimeter came from a circle - if so, remove it
         if perimeter_path_idx in circle_to_path_map:
             circles_to_remove.add(circle_to_path_map[perimeter_path_idx])
 
-        # Check if any pockets came from circles
-        for poly, points, path_idx in polygons[1:]:
-            if path_idx in circle_to_path_map:
-                circles_to_remove.add(circle_to_path_map[path_idx])
+        # If we created pockets from circles (only when polyline_count > 0), remove those too
+        if polyline_count > 0:
+            for poly, points, path_idx in polygons[1:]:
+                if path_idx in circle_to_path_map:
+                    circles_to_remove.add(circle_to_path_map[path_idx])
 
         # Remove circles in reverse order to avoid index issues
         if circles_to_remove:
