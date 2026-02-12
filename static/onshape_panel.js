@@ -6,6 +6,7 @@
     let selectedPartId = null;
     let currentSelection = null;  // Full selection object for highlighting
     let selectionRequestCounter = 0;
+    let isWaitingForSelection = false;
 
     // DOM elements
     const instruction = document.getElementById('instruction');
@@ -20,11 +21,11 @@
 
     /**
      * Request a face selection from Onshape
-     * This is called on initialization and after each successful selection
-     * to create a continuous loop of selection requests
+     * This is called on initialization and after "Send to PenguinCAM"
      */
     function requestFaceSelection() {
         selectionRequestCounter++;
+        isWaitingForSelection = true;
         const selectionMessage = {
             messageName: 'requestSelection',
             messageId: 'penguincam-selection-' + selectionRequestCounter,
@@ -117,6 +118,23 @@
 
         if (data.messageName === 'REQUESTED_SELECTION') {
             handleRequestedSelection(data);
+        } else if (data.messageName === 'SELECTION') {
+            // Generic selection messages can indicate timeout
+            handleGenericSelection(data);
+        }
+    }
+
+    /**
+     * Handle generic SELECTION messages (usually from timeout)
+     */
+    function handleGenericSelection(data) {
+        const selections = data.selections || [];
+
+        // If we're waiting for a selection and get an empty SELECTION message,
+        // the request probably timed out - re-issue it
+        if (isWaitingForSelection && selections.length === 0) {
+            console.log('Selection request timed out, re-requesting...');
+            requestFaceSelection();
         }
     }
 
@@ -136,9 +154,12 @@
             selectedFaceId = faceSelection.selectionId;
             selectedPartId = faceSelection.partId || null;
             currentSelection = faceSelection;
+            isWaitingForSelection = false;
 
-            // Update UI - hide instruction, show button
-            instruction.style.display = 'none';
+            // Update UI - show selected face info and button
+            instruction.innerHTML = '✓ Face selected: <strong>' + selectedFaceId + '</strong><br><small style="color: #666;">Additional selections will be ignored</small>';
+            instruction.style.color = '#27ae60';
+            instruction.style.display = 'block';
             buttonGroup.style.display = 'flex';
             sendBtn.disabled = false;
 
