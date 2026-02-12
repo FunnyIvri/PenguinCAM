@@ -1833,7 +1833,7 @@ class FRCPostProcessor:
 
         # Peck drilling parameters (from material settings)
         peck_depth = self.peck_drill_depth
-        retract_plane = self.retract_height  # Clearance above material
+        retract_plane = self.material_top + 0.1  # 0.1" above stock for chip clearing (not full retract)
         final_depth = self.cut_depth  # Bottom of cut (negative value)
 
         gcode.append(f"(Peck drill at center, then spiral clear to {diameter:.3f}\" diameter)")
