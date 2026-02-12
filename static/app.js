@@ -1780,7 +1780,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Calculate rotated bounding box to determine offset
             // We need to rotate all points, find their bounds, then offset so min is at (0,0)
-            const radians = rotationAngle * Math.PI / 180;
+            const radians = -rotationAngle * Math.PI / 180;  // Negative for clockwise (to match backend)
             const cos = Math.cos(radians);
             const sin = Math.sin(radians);
 
