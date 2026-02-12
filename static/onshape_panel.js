@@ -4,6 +4,7 @@
     // State
     let selectedFaceId = null;
     let selectedPartId = null;
+    let currentSelection = null;  // Full selection object for highlighting
     let selectionRequestCounter = 0;
 
     // DOM elements
@@ -120,6 +121,32 @@
     }
 
     /**
+     * Request highlighting of the current selection
+     * This keeps the selected face visually highlighted while waiting for next selection
+     */
+    function highlightCurrentSelection() {
+        if (!currentSelection) return;
+
+        const highlightMessage = {
+            messageName: 'requestSelectionHighlight',
+            messageId: 'penguincam-highlight-' + Date.now(),
+            documentId: context.documentId,
+            workspaceId: context.workspaceId,
+            elementId: context.elementId,
+            selections: [
+                {
+                    selectionType: currentSelection.selectionType,
+                    selectionId: currentSelection.selectionId,
+                    entityType: currentSelection.entityType,
+                    workspaceMicroversionId: currentSelection.workspaceMicroversionId
+                }
+            ]
+        };
+        window.parent.postMessage(highlightMessage, '*');
+        console.log('Requested highlight for current selection:', highlightMessage);
+    }
+
+    /**
      * Handle requested selection response from Onshape
      */
     function handleRequestedSelection(data) {
@@ -134,6 +161,7 @@
 
             selectedFaceId = faceSelection.selectionId;
             selectedPartId = faceSelection.partId || null;
+            currentSelection = faceSelection;  // Store full selection for highlighting
 
             // Update UI - hide instruction, show button
             instruction.style.display = 'none';
@@ -146,16 +174,23 @@
             // This creates a continuous loop where we're always ready for the next face
             requestFaceSelection();
         } else if (status.statusCode === 'PENDING') {
-            // Still waiting for selection
-            instruction.innerHTML = 'Select a face to export';
-            instruction.style.color = '';
-            instruction.style.display = 'block';
-            buttonGroup.style.display = 'none';
-            sendBtn.disabled = true;
+            // Still waiting for selection - keep current state if we have one
+            if (currentSelection) {
+                // We already have a selection - highlight it so user knows what's selected
+                highlightCurrentSelection();
+            } else {
+                // No selection yet - show instruction
+                instruction.innerHTML = 'Select a face to export';
+                instruction.style.color = '';
+                instruction.style.display = 'block';
+                buttonGroup.style.display = 'none';
+                sendBtn.disabled = true;
+            }
         } else {
             // No valid selection or cancelled
             selectedFaceId = null;
             selectedPartId = null;
+            currentSelection = null;
             buttonGroup.style.display = 'none';
             sendBtn.disabled = true;
             instruction.innerHTML = 'Select a face to export';
