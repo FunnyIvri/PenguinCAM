@@ -3679,11 +3679,13 @@ class FRCPostProcessor:
         # At arc PEAK (top of circle): tool center Y = roughing_y + j_offset + arc_radius (in waste)
         #
         # The CHORD is where tool -Y edge is closest to kept part (the limit for roughing).
-        # For roughing to leave finish_stock, the -Y edge at chord = y_cut + finish_stock:
-        #   roughing_y - tool_radius = y_cut + finish_stock
-        #   roughing_y = y_cut + finish_stock + tool_radius
-        roughing_y = y_cut + finish_stock + tool_radius
-        finishing_y = y_cut + tool_radius
+        # For roughing to leave finish_stock, the -Y edge at chord should be at finish_stock from kept edge:
+        #   roughing_y - tool_radius = (tube_length + finish_stock)
+        #   roughing_y = tube_length + finish_stock + tool_radius
+        # Since y_cut already equals tube_length + tool_radius:
+        #   roughing_y = y_cut + finish_stock
+        roughing_y = y_cut + finish_stock
+        finishing_y = y_cut  # y_cut is already the tool center position
 
         # Calculate peak position for comments
         peak_y = roughing_y + j_offset + arc_radius  # Tool center at peak
