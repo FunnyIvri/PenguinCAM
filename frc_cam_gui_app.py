@@ -607,8 +607,8 @@ def process_file():
                 # Load and process DXF
                 pp.load_dxf(input_path)
                 pp.transform_coordinates('bottom-left', rotation)  # Tube jig is always bottom-left
+                pp.identify_perimeter_and_pockets()  # Must come BEFORE classify_holes to remove perimeter circles
                 pp.classify_holes()
-                pp.identify_perimeter_and_pockets()
 
                 # Generate G-code using API
                 result = pp.generate_tube_pattern_gcode(
@@ -643,8 +643,8 @@ def process_file():
                 # Load and process DXF
                 pp.load_dxf(input_path)
                 pp.transform_coordinates(origin_corner, rotation)
+                pp.identify_perimeter_and_pockets()  # Must come BEFORE classify_holes to remove perimeter circles
                 pp.classify_holes()
-                pp.identify_perimeter_and_pockets()
 
                 # Generate G-code using API
                 result = pp.generate_gcode(suggested_filename=base_name, timestamp=timestamp_str)
