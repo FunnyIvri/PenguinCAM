@@ -4,6 +4,7 @@
     // State
     let selectedFaceId = null;
     let selectedPartId = null;
+    let selectionRequestCounter = 0;
 
     // DOM elements
     const instruction = document.getElementById('instruction');
@@ -15,6 +16,28 @@
 
     // Onshape context from template
     const context = window.ONSHAPE_CONTEXT;
+
+    /**
+     * Request a face selection from Onshape
+     * This is called on initialization and after each successful selection
+     * to create a continuous loop of selection requests
+     */
+    function requestFaceSelection() {
+        selectionRequestCounter++;
+        const selectionMessage = {
+            messageName: 'requestSelection',
+            messageId: 'penguincam-selection-' + selectionRequestCounter,
+            documentId: context.documentId,
+            workspaceId: context.workspaceId,
+            elementId: context.elementId,
+            filterType: 'simple',
+            entityTypeSpecifier: ['FACE'],      // Only faces
+            bodyTypeSpecifier: ['SOLID'],       // Only from solid bodies (not drawings)
+            requiredSelectionCount: 1           // Exactly one face
+        };
+        window.parent.postMessage(selectionMessage, '*');
+        console.log('Requested face selection:', selectionMessage);
+    }
 
     /**
      * Initialize the extension
@@ -37,21 +60,9 @@
         // Listen for messages from Onshape
         window.addEventListener('message', handleMessage);
 
-        // Request a face selection with filters to ensure only solid faces can be selected
-        // This prevents users from accidentally selecting faces from drawings/sketches
-        const selectionMessage = {
-            messageName: 'requestSelection',
-            messageId: 'penguincam-init-' + Date.now(),
-            documentId: context.documentId,
-            workspaceId: context.workspaceId,
-            elementId: context.elementId,
-            filterType: 'simple',
-            entityTypeSpecifier: ['FACE'],      // Only faces
-            bodyTypeSpecifier: ['SOLID'],       // Only from solid bodies (not drawings)
-            requiredSelectionCount: 1           // Exactly one face
-        };
-        window.parent.postMessage(selectionMessage, '*');
-        console.log('Requested face selection with filters:', selectionMessage);
+        // Request initial face selection
+        // This will be called again after each successful selection
+        requestFaceSelection();
 
         // Set up button handlers
         sendBtn.addEventListener('click', handleSendToPenguinCAM);
@@ -130,6 +141,10 @@
             sendBtn.disabled = false;
 
             console.log('✓ Face selected:', selectedFaceId, 'Part:', selectedPartId, 'Full selection:', faceSelection);
+
+            // Immediately request another selection so user can change their mind
+            // This creates a continuous loop where we're always ready for the next face
+            requestFaceSelection();
         } else if (status.statusCode === 'PENDING') {
             // Still waiting for selection
             instruction.innerHTML = 'Select a face to export';
