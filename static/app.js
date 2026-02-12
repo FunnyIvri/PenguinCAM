@@ -1878,10 +1878,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     cadDepth = layerInfo.depth !== null ? layerInfo.depth : 0;
                 }
 
-                // Convert from CAD Z to machine Z
-                // Machine Z = material_thickness + CAD_Z
-                // zHeight is the material thickness passed in
-                const machineDepth = zHeight + cadDepth;
+                // DXF layer depths are already in machine coordinates (Z=0 at bottom)
+                // Layer name like Z_0p236 means Z=0.236" up from bottom
+                // No conversion needed - use the value directly
+                const machineDepth = cadDepth;
 
                 console.log(`[DXF Render] Layer: ${layerName}, CAD depth: ${cadDepth.toFixed(3)}, Machine depth: ${machineDepth.toFixed(3)}, Entities: ${layerEntities.length}`);
                 // Get color for this layer
