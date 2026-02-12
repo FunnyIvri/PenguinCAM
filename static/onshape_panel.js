@@ -164,6 +164,18 @@
             sendBtn.disabled = false;
 
             console.log('✓ Face selected:', selectedFaceId, 'Part:', selectedPartId, 'Full selection:', faceSelection);
+
+            // EXPERIMENTAL: Try to fetch part metadata using browser session
+            // This might work if the iframe inherits Onshape's session cookies
+            const metadataUrl = `https://cad.onshape.com/api/partstudios/d/${context.documentId}/w/${context.workspaceId}/e/${context.elementId}/metadata`;
+            console.log('Attempting unauthenticated API call to:', metadataUrl);
+            fetch(metadataUrl, { credentials: 'include' })
+                .then(res => {
+                    console.log('API response status:', res.status);
+                    return res.json();
+                })
+                .then(data => console.log('Part metadata from session:', data))
+                .catch(err => console.log('API call failed:', err));
         } else if (status.statusCode === 'PENDING') {
             // Still waiting for selection
             instruction.innerHTML = 'Select a face to export';
