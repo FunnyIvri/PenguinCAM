@@ -12,6 +12,7 @@
     const instruction = document.getElementById('instruction');
     const buttonGroup = document.getElementById('buttonGroup');
     const sendBtn = document.getElementById('sendToPenguinCAM');
+    const selectAnotherBtn = document.getElementById('selectAnotherFace');
     const multilayerCheckbox = document.getElementById('multilayerMode');
     const modeLabel = document.getElementById('modeLabel');
     const modeHint = document.getElementById('modeHint');
@@ -68,6 +69,7 @@
 
         // Set up button handlers
         sendBtn.addEventListener('click', handleSendToPenguinCAM);
+        selectAnotherBtn.addEventListener('click', handleSelectAnother);
 
         // Set up mode checkbox handler
         multilayerCheckbox.addEventListener('change', updateModeInstructions);
@@ -156,26 +158,14 @@
             currentSelection = faceSelection;
             isWaitingForSelection = false;
 
-            // Update UI - show selected face info and button
-            instruction.innerHTML = '✓ Face selected: <strong>' + selectedFaceId + '</strong><br><small style="color: #666;">Additional selections will be ignored</small>';
+            // Update UI - show selected face info and buttons
+            instruction.innerHTML = '✓ Face selected: <strong>' + selectedFaceId + '</strong>';
             instruction.style.color = '#27ae60';
             instruction.style.display = 'block';
             buttonGroup.style.display = 'flex';
             sendBtn.disabled = false;
 
             console.log('✓ Face selected:', selectedFaceId, 'Part:', selectedPartId, 'Full selection:', faceSelection);
-
-            // EXPERIMENTAL: Try to fetch part metadata using browser session
-            // This might work if the iframe inherits Onshape's session cookies
-            const metadataUrl = `https://cad.onshape.com/api/partstudios/d/${context.documentId}/w/${context.workspaceId}/e/${context.elementId}/metadata`;
-            console.log('Attempting unauthenticated API call to:', metadataUrl);
-            fetch(metadataUrl, { credentials: 'include' })
-                .then(res => {
-                    console.log('API response status:', res.status);
-                    return res.json();
-                })
-                .then(data => console.log('Part metadata from session:', data))
-                .catch(err => console.log('API call failed:', err));
         } else if (status.statusCode === 'PENDING') {
             // Still waiting for selection
             instruction.innerHTML = 'Select a face to export';
@@ -227,6 +217,22 @@
 
         // Immediately request another face selection for the next operation
         // This creates a select-then-send workflow
+        requestFaceSelection();
+    }
+
+    /**
+     * Handle "Select another face" button
+     * Clears current selection and requests a new one
+     */
+    function handleSelectAnother() {
+        console.log('User requested to select another face');
+
+        // Clear current selection
+        selectedFaceId = null;
+        selectedPartId = null;
+        currentSelection = null;
+
+        // Request a new selection
         requestFaceSelection();
     }
 
