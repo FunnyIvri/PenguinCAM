@@ -2146,9 +2146,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (toolpathMoves.length === 0) return;
 
-            // Store offset to align toolpath lower-left with origin (to match DXF render)
-            toolpathOffsetX = minX;
-            toolpathOffsetY = minY;
+            // Do NOT offset toolpath coordinates - G-code coordinates are already correct
+            // Tool centers can be negative (outside part bounds by tool radius)
+            toolpathOffsetX = 0;
+            toolpathOffsetY = 0;
 
             // Clear old visualization
             const toRemove = [];
