@@ -1756,7 +1756,7 @@ document.addEventListener('DOMContentLoaded', () => {
          * This shows the "cutting geometry" - the original design shapes
          * Multi-layer DXFs render each layer at different depths with different colors
          */
-        function renderDxfGeometry(scene, entities, zHeight) {
+        function renderDxfGeometry(scene, entities, zHeight, originCorner = 'bottom-left') {
             if (!dxfBounds) return;
 
             // Check if we have layer information (multi-layer DXF)
@@ -1858,13 +1858,38 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(`[DXF Bounds] After rotation: minX=${minX.toFixed(3)}, maxX=${maxX.toFixed(3)}, minY=${minY.toFixed(3)}, maxY=${maxY.toFixed(3)}`);
             console.log(`[DXF Bounds] Width=${(maxX-minX).toFixed(3)}, Height=${(maxY-minY).toFixed(3)}`);
 
-            // Helper to transform a point: rotate around center, then translate so lower-left is at (0,0)
+            // Determine translation offsets based on origin corner
+            // The selected corner should become (0, 0)
+            let offsetX, offsetY;
+            switch (originCorner) {
+                case 'bottom-left':
+                    offsetX = -minX;
+                    offsetY = -minY;
+                    break;
+                case 'bottom-right':
+                    offsetX = -maxX;
+                    offsetY = -minY;
+                    break;
+                case 'top-left':
+                    offsetX = -minX;
+                    offsetY = -maxY;
+                    break;
+                case 'top-right':
+                    offsetX = -maxX;
+                    offsetY = -maxY;
+                    break;
+                default:
+                    offsetX = -minX;
+                    offsetY = -minY;
+            }
+
+            // Helper to transform a point: rotate around center, then translate based on origin corner
             function transformPoint(x, y, machineDepth) {
                 // Rotate
                 const rotated = rotatePoint(x, y);
-                // Translate so lower-left (minX, minY) is at origin
-                const tx = rotated.x - minX;
-                const ty = rotated.y - minY;
+                // Translate based on selected origin corner
+                const tx = rotated.x + offsetX;
+                const ty = rotated.y + offsetY;
                 // Map to Three.js coordinates: X -> X, Y at machine depth, Z -> -Y
                 return new THREE.Vector3(tx, machineDepth, -ty);
             }

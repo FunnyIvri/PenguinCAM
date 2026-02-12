@@ -794,6 +794,17 @@ class FRCPostProcessor:
                 all_x.append(x)
                 all_y.append(y)
 
+        # Also collect coordinates from multi-layer geometry if present
+        if self.layer_data:
+            for layer_name, layer_info in self.layer_data.items():
+                for circle in layer_info['circles']:
+                    all_x.append(circle['center'][0])
+                    all_y.append(circle['center'][1])
+                for polyline in layer_info['polylines']:
+                    for x, y in polyline:
+                        all_x.append(x)
+                        all_y.append(y)
+
         if not all_x or not all_y:
             print("Warning: No geometry found for transformation")
             return
@@ -848,6 +859,17 @@ class FRCPostProcessor:
             for i, polyline in enumerate(self.polylines):
                 self.polylines[i] = [rotate_point(x, y) for x, y in polyline]
 
+            # Also transform multi-layer geometry if present
+            if self.layer_data:
+                for layer_name, layer_info in self.layer_data.items():
+                    # Rotate circles
+                    for circle in layer_info['circles']:
+                        circle['center'] = rotate_point(*circle['center'])
+
+                    # Rotate polylines
+                    for i, polyline in enumerate(layer_info['polylines']):
+                        layer_info['polylines'][i] = [rotate_point(x, y) for x, y in polyline]
+
             # Recalculate bounds after rotation
             all_x = []
             all_y = []
@@ -868,6 +890,17 @@ class FRCPostProcessor:
                 for x, y in polyline:
                     all_x.append(x)
                     all_y.append(y)
+
+            # Include multi-layer geometry in bounds calculation
+            if self.layer_data:
+                for layer_name, layer_info in self.layer_data.items():
+                    for circle in layer_info['circles']:
+                        all_x.append(circle['center'][0])
+                        all_y.append(circle['center'][1])
+                    for polyline in layer_info['polylines']:
+                        for x, y in polyline:
+                            all_x.append(x)
+                            all_y.append(y)
 
             minX, maxX = min(all_x), max(all_x)
             minY, maxY = min(all_y), max(all_y)
@@ -900,6 +933,17 @@ class FRCPostProcessor:
         for i, polyline in enumerate(self.polylines):
             self.polylines[i] = [translate_point(x, y) for x, y in polyline]
 
+        # Also transform multi-layer geometry if present
+        if self.layer_data:
+            for layer_name, layer_info in self.layer_data.items():
+                # Translate circles
+                for circle in layer_info['circles']:
+                    circle['center'] = translate_point(*circle['center'])
+
+                # Translate polylines
+                for i, polyline in enumerate(layer_info['polylines']):
+                    layer_info['polylines'][i] = [translate_point(x, y) for x, y in polyline]
+
         # Calculate new bounds
         all_x = []
         all_y = []
@@ -913,6 +957,17 @@ class FRCPostProcessor:
             for x, y in polyline:
                 all_x.append(x)
                 all_y.append(y)
+
+        # Include multi-layer geometry in final bounds
+        if self.layer_data:
+            for layer_name, layer_info in self.layer_data.items():
+                for circle in layer_info['circles']:
+                    all_x.append(circle['center'][0])
+                    all_y.append(circle['center'][1])
+                for polyline in layer_info['polylines']:
+                    for x, y in polyline:
+                        all_x.append(x)
+                        all_y.append(y)
 
         new_minX, new_maxX = min(all_x), max(all_x)
         new_minY, new_maxY = min(all_y), max(all_y)
