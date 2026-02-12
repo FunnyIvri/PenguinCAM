@@ -769,8 +769,11 @@ class FRCPostProcessor:
         
         # Collect all X,Y coordinates
         for circle in self.circles:
-            all_x.append(circle['center'][0])
-            all_y.append(circle['center'][1])
+            cx, cy = circle['center']
+            r = circle.get('radius') or (circle.get('diameter', 0) / 2)
+            # Include circle bounds (center ± radius)
+            all_x.extend([cx - r, cx + r])
+            all_y.extend([cy - r, cy + r])
         
         for line in self.lines:
             all_x.extend([line['start'][0], line['end'][0]])
@@ -799,8 +802,11 @@ class FRCPostProcessor:
         if self.layer_data:
             for layer_name, layer_info in self.layer_data.items():
                 for circle in layer_info['circles']:
-                    all_x.append(circle['center'][0])
-                    all_y.append(circle['center'][1])
+                    cx, cy = circle['center']
+                    r = circle.get('radius') or (circle.get('diameter', 0) / 2)
+                    # Include circle bounds (center ± radius)
+                    all_x.extend([cx - r, cx + r])
+                    all_y.extend([cy - r, cy + r])
                 for polyline in layer_info['polylines']:
                     for x, y in polyline:
                         all_x.append(x)
@@ -875,8 +881,10 @@ class FRCPostProcessor:
             all_x = []
             all_y = []
             for circle in self.circles:
-                all_x.append(circle['center'][0])
-                all_y.append(circle['center'][1])
+                cx, cy = circle['center']
+                r = circle.get('radius') or (circle.get('diameter', 0) / 2)
+                all_x.extend([cx - r, cx + r])
+                all_y.extend([cy - r, cy + r])
             for line in self.lines:
                 all_x.extend([line['start'][0], line['end'][0]])
                 all_y.extend([line['start'][1], line['end'][1]])
@@ -896,8 +904,10 @@ class FRCPostProcessor:
             if self.layer_data:
                 for layer_name, layer_info in self.layer_data.items():
                     for circle in layer_info['circles']:
-                        all_x.append(circle['center'][0])
-                        all_y.append(circle['center'][1])
+                        cx, cy = circle['center']
+                        r = circle.get('radius') or (circle.get('diameter', 0) / 2)
+                        all_x.extend([cx - r, cx + r])
+                        all_y.extend([cy - r, cy + r])
                     for polyline in layer_info['polylines']:
                         for x, y in polyline:
                             all_x.append(x)
@@ -949,8 +959,10 @@ class FRCPostProcessor:
         all_x = []
         all_y = []
         for circle in self.circles:
-            all_x.append(circle['center'][0])
-            all_y.append(circle['center'][1])
+            cx, cy = circle['center']
+            r = circle.get('radius') or (circle.get('diameter', 0) / 2)
+            all_x.extend([cx - r, cx + r])
+            all_y.extend([cy - r, cy + r])
         for line in self.lines:
             all_x.extend([line['start'][0], line['end'][0]])
             all_y.extend([line['start'][1], line['end'][1]])
@@ -963,8 +975,10 @@ class FRCPostProcessor:
         if self.layer_data:
             for layer_name, layer_info in self.layer_data.items():
                 for circle in layer_info['circles']:
-                    all_x.append(circle['center'][0])
-                    all_y.append(circle['center'][1])
+                    cx, cy = circle['center']
+                    r = circle.get('radius') or (circle.get('diameter', 0) / 2)
+                    all_x.extend([cx - r, cx + r])
+                    all_y.extend([cy - r, cy + r])
                 for polyline in layer_info['polylines']:
                     for x, y in polyline:
                         all_x.append(x)
