@@ -690,5 +690,208 @@ class TestTeamConfigIntegration(unittest.TestCase):
                           "G-code should differ when using different ramp angles")
 
 
+class TestCircularPerimeter(unittest.TestCase):
+    """Test parts with circular perimeters (like washers)"""
+
+    def test_washer_with_rotation_and_translation(self):
+        """Test washer-like part: circular perimeter with hole, verify proper rotation and translation."""
+        pp = FRCPostProcessor(0.236, 0.157)
+        pp.apply_material_preset('plywood')  # Sets required material parameters
+
+        # Washer centered at origin: outer 4" diameter, inner 2" diameter
+        pp.circles = [
+            {'center': (0.0, 0.0), 'radius': 2.0, 'diameter': 4.0},  # Outer
+            {'center': (0.0, 0.0), 'radius': 1.0, 'diameter': 2.0},  # Inner hole
+        ]
+        pp.polylines = []
+        pp.lines = []
+        pp.arcs = []
+        pp.splines = []
+
+        # Apply transformation first (matches backend order)
+        # Original bounds: center=(0,0), radius=2.0 → bounds X=[-2,2], Y=[-2,2]
+        # After rotation 90° clockwise: still circular, same bounds
+        # After translation to bottom-left: offset by (+2, +2) to move min to (0,0)
+        pp.transform_coordinates('bottom-left', 90)
+
+        # Identify perimeter (must come before classify_holes per new ordering)
+        pp.identify_perimeter_and_pockets()
+
+        # After identify_perimeter_and_pockets:
+        # - perimeter should exist (outer circle converted to polyline)
+        # - pockets should be empty (no polylines, circular geometry)
+        # - outer circle should be removed from self.circles
+        self.assertIsNotNone(pp.perimeter, "Perimeter should be identified from outer circle")
+        self.assertEqual(len(pp.pockets), 0, "No pockets for circular-only geometry")
+        self.assertEqual(len(pp.circles), 1, "Only inner circle should remain after perimeter identification")
+
+        # Classify holes (after transform, so holes have transformed coordinates)
+        pp.classify_holes()
+        self.assertEqual(len(pp.holes), 1, "Inner circle should be classified as hole")
+        self.assertAlmostEqual(pp.holes[0]['diameter'], 2.0, places=2, msg="Hole diameter should be 2.0\"")
+
+        # Check hole center after transformation
+        # Both circles present during transform: bounds X=[-2,2], Y=[-2,2] → offset (+2,+2)
+        # Inner circle at (0,0) becomes (2,2) after translation
+        hole = pp.holes[0]
+        cx, cy = hole['center']
+        self.assertAlmostEqual(cx, 2.0, places=1, msg="Hole X should be translated to 2.0")
+        self.assertAlmostEqual(cy, 2.0, places=1, msg="Hole Y should be translated to 2.0")
+
+        # Check perimeter points are all in positive quadrant
+        for i, point in enumerate(pp.perimeter):
+            self.assertGreaterEqual(point[0], -0.1,
+                                   msg=f"Perimeter point {i} X should be non-negative after translation")
+            self.assertGreaterEqual(point[1], -0.1,
+                                   msg=f"Perimeter point {i} Y should be non-negative after translation")
+
+        # Generate G-code and verify success
+        result = pp.generate_gcode()
+        self.assertTrue(result.success, f"G-code generation should succeed: {result.errors}")
+
+        # Verify G-code contains hole operation but NOT two holes
+        gcode_lines = result.gcode.split('\n')
+        hole_count = sum(1 for line in gcode_lines if 'Hole' in line and 'diameter' in line)
+        self.assertEqual(hole_count, 1, "Should have exactly one hole (inner circle), not outer perimeter")
+
+        # Verify G-code contains perimeter operation
+        has_perimeter = any('PERIMETER' in line for line in gcode_lines)
+        self.assertTrue(has_perimeter, "G-code should contain perimeter operation")
+
+    def test_concentric_circles_correct_identification(self):
+        """Test that concentric circles correctly identify outer as perimeter, inner as hole."""
+        pp = FRCPostProcessor(0.25, 0.157)
+
+        # Three concentric circles: outer perimeter, two inner holes
+        pp.circles = [
+            {'center': (5.0, 5.0), 'radius': 4.0, 'diameter': 8.0},  # Outer
+            {'center': (5.0, 5.0), 'radius': 2.0, 'diameter': 4.0},  # Middle hole
+            {'center': (5.0, 5.0), 'radius': 1.0, 'diameter': 2.0},  # Inner hole
+        ]
+        pp.polylines = []
+        pp.lines = []
+        pp.arcs = []
+        pp.splines = []
+
+        pp.identify_perimeter_and_pockets()
+        pp.classify_holes()
+
+        # Largest should be perimeter, others should be holes
+        self.assertIsNotNone(pp.perimeter)
+        self.assertEqual(len(pp.circles), 2, "Two inner circles should remain for holes")
+        self.assertEqual(len(pp.holes), 2, "Should have 2 holes from inner circles")
+
+        # Verify holes are sorted by size
+        self.assertGreater(pp.holes[0]['diameter'], pp.holes[1]['diameter'],
+                          "Holes should be sorted largest first")
+
+
+class TestPerimeterWithArcs(unittest.TestCase):
+    """Test parts with complex perimeters including arcs"""
+
+    def test_polyline_perimeter_with_holes_and_transform(self):
+        """Test typical part: polyline perimeter with circular holes, verify transform doesn't break."""
+        pp = FRCPostProcessor(0.25, 0.157)
+        pp.apply_material_preset('plywood')  # Sets max_slotting_depth and other required params
+
+        # Rectangle 10"x8" with two circular holes
+        pp.circles = [
+            {'center': (3.0, 4.0), 'radius': 0.5, 'diameter': 1.0},  # Left hole
+            {'center': (7.0, 4.0), 'radius': 0.5, 'diameter': 1.0},  # Right hole
+        ]
+        pp.polylines = [
+            [(0, 0), (10, 0), (10, 8), (0, 8)]  # Rectangular perimeter
+        ]
+        pp.lines = []
+        pp.arcs = []
+        pp.splines = []
+
+        # Apply 90° rotation first (matches backend order) - should swap width and height
+        pp.transform_coordinates('bottom-left', 90)
+
+        # Process (after transform)
+        pp.identify_perimeter_and_pockets()
+        pp.classify_holes()
+
+        # Verify identification
+        self.assertIsNotNone(pp.perimeter, "Should identify polyline as perimeter")
+        self.assertEqual(len(pp.pockets), 0, "No pockets")
+        self.assertEqual(len(pp.holes), 2, "Should have 2 holes")
+
+        # After rotation, bounds should swap: was 10x8, now 8x10
+        # Check holes are still in bounds
+        for hole in pp.holes:
+            cx, cy = hole['center']
+            # After rotation and translation, holes should be in positive quadrant
+            # and within the new bounds (8x10 after 90° rotation)
+            self.assertGreaterEqual(cx, -0.1, "Hole X should be non-negative")
+            self.assertGreaterEqual(cy, -0.1, "Hole Y should be non-negative")
+            self.assertLessEqual(cx, 9.0, "Hole X should be within bounds")
+            self.assertLessEqual(cy, 11.0, "Hole Y should be within bounds")
+
+        # Check perimeter bounds
+        perimeter_xs = [p[0] for p in pp.perimeter]
+        perimeter_ys = [p[1] for p in pp.perimeter]
+
+        # Min should be at/near origin after bottom-left translation
+        self.assertAlmostEqual(min(perimeter_xs), 0.0, places=1,
+                              msg="Perimeter min X should be at origin")
+        self.assertAlmostEqual(min(perimeter_ys), 0.0, places=1,
+                              msg="Perimeter min Y should be at origin")
+
+        # After 90° clockwise rotation, original (10,0) → (0,10), (10,8) → (8,10), (0,8) → (8,0)
+        # So the rotated rectangle goes from (0,0) to (8,10)
+        self.assertAlmostEqual(max(perimeter_xs), 8.0, places=1,
+                              msg="After 90° rotation, X max should be 8")
+        self.assertAlmostEqual(max(perimeter_ys), 10.0, places=1,
+                              msg="After 90° rotation, Y max should be 10")
+
+        # Generate G-code
+        result = pp.generate_gcode()
+        self.assertTrue(result.success, "G-code generation should succeed")
+
+    def test_circle_bounds_with_polyline_perimeter(self):
+        """Test that circle radius is properly included in bounds calculation."""
+        pp = FRCPostProcessor(0.25, 0.157)
+        pp.apply_material_preset('plywood')  # Sets required material parameters
+
+        # Small rectangle with large hole offset to one side
+        # This tests that hole radius extends bounds correctly
+        pp.circles = [
+            {'center': (1.0, 1.0), 'radius': 3.0, 'diameter': 6.0},  # Large hole extends beyond polyline
+        ]
+        pp.polylines = [
+            [(0, 0), (2, 0), (2, 2), (0, 2)]  # Small 2x2 rectangle
+        ]
+        pp.lines = []
+        pp.arcs = []
+        pp.splines = []
+
+        # Transform first (matches backend order)
+        # The hole extends from (1-3, 1-3) to (1+3, 1+3) = (-2, -2) to (4, 4)
+        # Combined with rectangle (0,0) to (2,2), overall bounds are (-2, -2) to (4, 4)
+        # After bottom-left translation by (+2, +2), bounds become (0, 0) to (6, 6)
+        pp.transform_coordinates('bottom-left', 0)
+
+        pp.identify_perimeter_and_pockets()
+        pp.classify_holes()
+
+        # After translation, check that geometry is properly positioned
+        hole = pp.holes[0]
+        cx, cy = hole['center']
+
+        # Hole center should be translated from (1,1) by (+2,+2) = (3,3)
+        self.assertAlmostEqual(cx, 3.0, places=1, msg="Hole X center after translation")
+        self.assertAlmostEqual(cy, 3.0, places=1, msg="Hole Y center after translation")
+
+        # Perimeter min should be at X=2, Y=2 (rectangle was 0-2, offset by +2)
+        perimeter_xs = [p[0] for p in pp.perimeter]
+        perimeter_ys = [p[1] for p in pp.perimeter]
+        self.assertAlmostEqual(min(perimeter_xs), 2.0, places=1,
+                              msg="Perimeter should start at X=2 (rectangle was 0-2, offset by +2)")
+        self.assertAlmostEqual(min(perimeter_ys), 2.0, places=1,
+                              msg="Perimeter should start at Y=2 (rectangle was 0-2, offset by +2)")
+
+
 if __name__ == '__main__':
     unittest.main()
