@@ -1154,15 +1154,36 @@ class OnshapeClient:
         log(f"Reference origin: {reference_origin}")
 
         # CRITICAL: Check reference normal direction
-        # If normal points downward (z < 0), we need to flip all signed distances
-        # This happens when user selects a bottom face looking up at it
+        # If normal points in the negative direction of its dominant axis, we need to flip depths
+        # This happens when user selects a face pointing DOWN, LEFT, or BACK
+        ref_nx = reference_normal.get('x', 0.0)
+        ref_ny = reference_normal.get('y', 0.0)
         ref_nz = reference_normal.get('z', 1.0)
-        flip_depths = ref_nz < 0
+
+        # Find dominant axis and check if it's negative
+        abs_nx, abs_ny, abs_nz = abs(ref_nx), abs(ref_ny), abs(ref_nz)
+
+        if abs_nz > abs_nx and abs_nz > abs_ny:
+            # Z-axis dominant (horizontal face)
+            flip_depths = ref_nz < 0
+            axis_name = "Z (DOWN)" if flip_depths else "Z (UP)"
+        elif abs_ny > abs_nx:
+            # Y-axis dominant (front/back face)
+            flip_depths = ref_ny < 0
+            axis_name = "Y (BACK)" if flip_depths else "Y (FRONT)"
+        else:
+            # X-axis dominant (left/right face)
+            flip_depths = ref_nx < 0
+            axis_name = "X (LEFT)" if flip_depths else "X (RIGHT)"
+
+        log(f"Reference normal: ({ref_nx:.3f}, {ref_ny:.3f}, {ref_nz:.3f})")
+        log(f"Dominant axis: {axis_name}")
+
         if flip_depths:
-            log(f"⚠️  Reference normal points DOWNWARD (z={ref_nz:.4f})")
+            log(f"⚠️  Normal points in NEGATIVE direction along dominant axis")
             log(f"   Will negate all depth values to correct coordinate system")
         else:
-            log(f"✅ Reference normal points UPWARD (z={ref_nz:.4f})")
+            log(f"✅ Normal points in POSITIVE direction along dominant axis")
 
         # Find all parallel faces grouped by depth
         # Use tight tolerance (1 mil) to avoid grouping distinct layers
