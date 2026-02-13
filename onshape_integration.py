@@ -1152,38 +1152,7 @@ class OnshapeClient:
         log(f"{'='*70}")
         log(f"Reference normal: {reference_normal}")
         log(f"Reference origin: {reference_origin}")
-
-        # CRITICAL: Check reference normal direction
-        # If normal points in the negative direction of its dominant axis, we need to flip depths
-        # This happens when user selects a face pointing DOWN, LEFT, or BACK
-        ref_nx = reference_normal.get('x', 0.0)
-        ref_ny = reference_normal.get('y', 0.0)
-        ref_nz = reference_normal.get('z', 1.0)
-
-        # Find dominant axis and check if it's negative
-        abs_nx, abs_ny, abs_nz = abs(ref_nx), abs(ref_ny), abs(ref_nz)
-
-        if abs_nz > abs_nx and abs_nz > abs_ny:
-            # Z-axis dominant (horizontal face)
-            flip_depths = ref_nz < 0
-            axis_name = "Z (DOWN)" if flip_depths else "Z (UP)"
-        elif abs_ny > abs_nx:
-            # Y-axis dominant (front/back face)
-            flip_depths = ref_ny < 0
-            axis_name = "Y (BACK)" if flip_depths else "Y (FRONT)"
-        else:
-            # X-axis dominant (left/right face)
-            flip_depths = ref_nx < 0
-            axis_name = "X (LEFT)" if flip_depths else "X (RIGHT)"
-
-        log(f"Reference normal: ({ref_nx:.3f}, {ref_ny:.3f}, {ref_nz:.3f})")
-        log(f"Dominant axis: {axis_name}")
-
-        if flip_depths:
-            log(f"⚠️  Normal points in NEGATIVE direction along dominant axis")
-            log(f"   Will negate all depth values to correct coordinate system")
-        else:
-            log(f"✅ Normal points in POSITIVE direction along dominant axis")
+        log(f"Reference face ID: {reference_face_id}")
 
         # Find all parallel faces grouped by depth
         # Use tight tolerance (1 mil) to avoid grouping distinct layers
@@ -1198,15 +1167,45 @@ class OnshapeClient:
             log("No parallel faces found")
             return None
 
-        # Flip depths if reference normal pointed downward
-        if flip_depths:
-            log("\n🔄 Negating all depth values (reference normal was downward)")
-            corrected_bins = {}
-            for depth, faces in depth_bins.items():
-                corrected_depth = -depth
-                log(f"   {depth:+.4f}\" → {corrected_depth:+.4f}\"")
-                corrected_bins[corrected_depth] = faces
-            depth_bins = corrected_bins
+        # CRITICAL: Find the depth of the selected reference face
+        # The selected face must ALWAYS end up at the TOP (maximum Z)
+        reference_depth = None
+        for depth, faces in depth_bins.items():
+            for face in faces:
+                if face['face_id'] == reference_face_id:
+                    reference_depth = depth
+                    log(f"\n📍 Found reference face {reference_face_id} at depth {depth:+.4f}\"")
+                    break
+            if reference_depth is not None:
+                break
+
+        if reference_depth is None:
+            log(f"⚠️  Reference face {reference_face_id} not found in depth bins!")
+            log(f"   Available faces: {[f['face_id'] for faces in depth_bins.values() for f in faces]}")
+            # Continue anyway, fall back to old logic
+        else:
+            # Check if reference face has the maximum depth
+            # If not, we need to flip all depths so it becomes the maximum
+            max_depth = max(depth_bins.keys())
+            min_depth = min(depth_bins.keys())
+
+            log(f"   Current depth range: {min_depth:+.4f}\" to {max_depth:+.4f}\"")
+            log(f"   Reference face is at: {reference_depth:+.4f}\"")
+
+            # If reference is closer to min than max, flip all depths
+            # This ensures the selected face ends up at the TOP
+            if abs(reference_depth - min_depth) < abs(reference_depth - max_depth):
+                log(f"⚠️  Reference face is closer to MIN depth (should be at TOP)")
+                log(f"   Negating all depths to put reference face at maximum")
+                corrected_bins = {}
+                for depth, faces in depth_bins.items():
+                    corrected_depth = -depth
+                    log(f"   {depth:+.4f}\" → {corrected_depth:+.4f}\"")
+                    corrected_bins[corrected_depth] = faces
+                depth_bins = corrected_bins
+                log(f"   Reference face now at: {-reference_depth:+.4f}\"")
+            else:
+                log(f"✅ Reference face is already at or near maximum depth (will be at TOP)")
 
         # Export each depth group
         dxf_contents = {}
