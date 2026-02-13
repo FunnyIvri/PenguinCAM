@@ -139,9 +139,9 @@
             // Selection request timed out - re-issue it
             console.log('Selection request timed out, re-requesting...');
             requestFaceSelection();
-        } else if (!isWaitingForSelection && currentSelection && selections.length > 0) {
-            // User clicked something while we already have a face selected
-            // Treat this as a "select another" operation
+        } else if (!isWaitingForSelection && currentSelection) {
+            // User made a selection change while we already have a face selected
+            // Treat this as a "select another" operation (whether they clicked something or deselected)
             console.log('User changed selection, requesting new face selection...');
             selectedFaceId = null;
             selectedPartId = null;
