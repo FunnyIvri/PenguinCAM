@@ -332,44 +332,69 @@ class OnshapeClient:
         Returns:
             String representing a 4x4 view matrix in Onshape format
         """
+        import math
+
         nx = normal.get('x', 0)
         ny = normal.get('y', 0)
         nz = normal.get('z', 1)
 
-        # Determine which axis the normal is closest to
-        abs_nx, abs_ny, abs_nz = abs(nx), abs(ny), abs(nz)
+        # Normalize the normal vector
+        mag = math.sqrt(nx*nx + ny*ny + nz*nz)
+        if mag < 1e-6:
+            # Degenerate normal, use default top view
+            return "1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1"
 
-        # View matrices for 6 cardinal directions (4x4 in row-major order)
-        # Format: a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p representing:
-        # a b c d
-        # e f g h
-        # i j k l
-        # m n o p
+        nx /= mag
+        ny /= mag
+        nz /= mag
 
-        if abs_nz > abs_nx and abs_nz > abs_ny:
-            # Face pointing ±Z (horizontal)
-            if nz > 0:
-                # Top view (looking down -Z)
-                return "1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1"
-            else:
-                # Bottom view (looking up +Z, flip X)
-                return "-1,0,0,0,0,1,0,0,0,0,-1,0,0,0,0,1"
-        elif abs_ny > abs_nx:
-            # Face pointing ±Y
-            if ny > 0:
-                # Back view (looking along -Y, rotate -90° around X)
-                return "1,0,0,0,0,0,-1,0,0,1,0,0,0,0,0,1"
-            else:
-                # Front view (looking along +Y, rotate 90° around X)
-                return "1,0,0,0,0,0,1,0,0,-1,0,0,0,0,0,1"
+        # Create an orthonormal basis for the view
+        # The normal becomes the Z-axis (viewing direction)
+        # We need to find perpendicular X and Y axes
+
+        # Choose a reference "up" vector that isn't parallel to the normal
+        # Prefer world Z-axis, but use world Y if normal is close to Z
+        if abs(nz) < 0.9:
+            # Normal is not close to Z-axis, use world Z as up reference
+            up_x, up_y, up_z = 0, 0, 1
         else:
-            # Face pointing ±X
-            if nx > 0:
-                # Right side view (looking along -X, rotate 90° around Y)
-                return "0,0,-1,0,0,1,0,0,1,0,0,0,0,0,0,1"
-            else:
-                # Left side view (looking along +X, rotate -90° around Y)
-                return "0,0,1,0,0,1,0,0,-1,0,0,0,0,0,0,1"
+            # Normal is close to Z-axis, use world Y as up reference
+            up_x, up_y, up_z = 0, 1, 0
+
+        # Compute right vector = up × normal (cross product)
+        right_x = up_y * nz - up_z * ny
+        right_y = up_z * nx - up_x * nz
+        right_z = up_x * ny - up_y * nx
+
+        # Normalize right vector
+        right_mag = math.sqrt(right_x*right_x + right_y*right_y + right_z*right_z)
+        if right_mag < 1e-6:
+            # Degenerate case, fall back to default
+            return "1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1"
+
+        right_x /= right_mag
+        right_y /= right_mag
+        right_z /= right_mag
+
+        # Compute actual up vector = normal × right
+        actual_up_x = ny * right_z - nz * right_y
+        actual_up_y = nz * right_x - nx * right_z
+        actual_up_z = nx * right_y - ny * right_x
+
+        # Build 4x4 view matrix in row-major order
+        # First row is right vector
+        # Second row is up vector
+        # Third row is normal vector
+        # Fourth row is translation (0,0,0,1)
+        matrix = [
+            right_x, right_y, right_z, 0,
+            actual_up_x, actual_up_y, actual_up_z, 0,
+            nx, ny, nz, 0,
+            0, 0, 0, 1
+        ]
+
+        # Convert to comma-separated string
+        return ','.join(str(v) for v in matrix)
 
     def export_face_to_dxf(self, document_id, workspace_id, element_id, face_id, body_id=None, face_normal=None):
         """
