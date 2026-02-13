@@ -169,7 +169,7 @@
             isWaitingForSelection = false;
 
             // Update UI - show selected face info and buttons
-            instruction.innerHTML = '✓ Face selected: <strong>' + selectedFaceId + '</strong>';
+            instruction.innerHTML = '✓ Onshape faceId selected: <strong>' + selectedFaceId + '</strong>';
             instruction.style.color = '#27ae60';
             instruction.style.display = 'block';
             buttonGroup.style.display = 'flex';
