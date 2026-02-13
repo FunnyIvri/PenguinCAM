@@ -14,7 +14,8 @@
     const sendBtn = document.getElementById('sendToPenguinCAM');
     const selectAnotherBtn = document.getElementById('selectAnotherFace');
     const multilayerCheckbox = document.getElementById('multilayerMode');
-    const modeLabel = document.getElementById('modeLabel');
+    const mode2DLabel = document.getElementById('mode2DLabel');
+    const mode25DLabel = document.getElementById('mode25DLabel');
     const modeHint = document.getElementById('modeHint');
 
     // Onshape context from template
@@ -86,20 +87,22 @@
 
         if (isMultilayer) {
             // 2.5D mode - stock must match CAD
-            modeLabel.textContent = 'Multi-layer (2.5D) mode';
+            mode2DLabel.classList.remove('active');
+            mode25DLabel.classList.add('active');
             modeHint.textContent = 'Stock thickness must match CAD part thickness';
             // Update instruction if no face selected
             if (!selectedFaceId && instruction.style.display !== 'none') {
-                instruction.innerHTML = 'Select a face at the <strong>top-most layer</strong> of your part';
+                instruction.innerHTML = 'Select a face at the <strong>top-most layer</strong> to manufacture';
                 instruction.style.color = '';
             }
         } else {
             // 2D mode - any stock works
-            modeLabel.textContent = 'Single-layer (2D) mode';
+            mode2DLabel.classList.add('active');
+            mode25DLabel.classList.remove('active');
             modeHint.textContent = 'Any stock thickness works - cutting a flat pattern only';
             // Update instruction if no face selected
             if (!selectedFaceId && instruction.style.display !== 'none') {
-                instruction.innerHTML = 'Select the <strong>top face</strong> of your part';
+                instruction.innerHTML = 'Select the <strong>top face</strong> to manufacture';
                 instruction.style.color = '';
             }
         }
@@ -127,15 +130,22 @@
     }
 
     /**
-     * Handle generic SELECTION messages (usually from timeout)
+     * Handle generic SELECTION messages
      */
     function handleGenericSelection(data) {
         const selections = data.selections || [];
 
-        // If we're waiting for a selection and get an empty SELECTION message,
-        // the request probably timed out - re-issue it
         if (isWaitingForSelection && selections.length === 0) {
+            // Selection request timed out - re-issue it
             console.log('Selection request timed out, re-requesting...');
+            requestFaceSelection();
+        } else if (!isWaitingForSelection && currentSelection && selections.length > 0) {
+            // User clicked something while we already have a face selected
+            // Treat this as a "select another" operation
+            console.log('User changed selection, requesting new face selection...');
+            selectedFaceId = null;
+            selectedPartId = null;
+            currentSelection = null;
             requestFaceSelection();
         }
     }
@@ -168,7 +178,7 @@
             console.log('✓ Face selected:', selectedFaceId, 'Part:', selectedPartId, 'Full selection:', faceSelection);
         } else if (status.statusCode === 'PENDING') {
             // Still waiting for selection
-            instruction.innerHTML = 'Select a face to export';
+            instruction.innerHTML = 'Select a face to manufacture';
             instruction.style.color = '';
             instruction.style.display = 'block';
             buttonGroup.style.display = 'none';
