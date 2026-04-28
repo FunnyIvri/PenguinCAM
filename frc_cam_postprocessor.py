@@ -17,7 +17,7 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import List, Tuple, Optional, Dict, Any
-
+from ezdxf.layouts.layout import Modelspace
 # Third-party
 import ezdxf
 
@@ -353,9 +353,10 @@ class FRCPostProcessor:
         else:
             return int_part + frac_value
 
-    def load_dxf(self, filename: str):
+    def load_dxf(self, filename: str, dxf_unit: str = "4"):
         """Load DXF file and extract geometry, organized by layer if multi-layer DXF"""
         print(f"Loading {filename}...")
+        self.dxf_unit = int(dxf_unit)
         doc = ezdxf.readfile(filename)
         msp = doc.modelspace()
 
@@ -372,16 +373,24 @@ class FRCPostProcessor:
         else:
             print("Processing as single-layer DXF")
             self._load_singlelayer_dxf(msp)
+    def getNumberInInch(self, number : float) -> float:
+        if self.dxf_unit == 1:  # Inch
+            print("inch")
+            return number
+        elif self.dxf_unit == 4:  # MM
+            return number / 25.4
+        else: return number
 
-    def _load_singlelayer_dxf(self, msp):
+    def _load_singlelayer_dxf(self, msp : Modelspace):
         """Load geometry from single-layer DXF (existing logic)"""
         self.layer_data = None  # Mark as single-layer
 
         # Extract circles (holes)
         self.circles = []
         for entity in msp.query('CIRCLE'):
-            center = (entity.dxf.center.x, entity.dxf.center.y)
-            radius = entity.dxf.radius
+            center = (self.getNumberInInch(entity.dxf.center.x), self.getNumberInInch(entity.dxf.center.y))
+            radius = self.getNumberInInch(entity.dxf.radius)
+            print(radius)
             self.circles.append({'center': center, 'radius': radius, 'diameter': radius * 2})
 
         # Initialize geometry lists for transform_coordinates compatibility
@@ -394,14 +403,14 @@ class FRCPostProcessor:
         
         # Method 1: Look for LWPOLYLINE entities
         for entity in msp.query('LWPOLYLINE'):
-            points = [(p[0], p[1]) for p in entity.get_points('xy')]
+            points = [(self.getNumberInInch(p[0]), self.getNumberInInch(p[1])) for p in entity.get_points('xy')]
             if entity.closed and len(points) > 2:
                 self.polylines.append(points)
         
         # Method 2: Look for POLYLINE entities
         for entity in msp.query('POLYLINE'):
             if entity.is_2d_polyline:
-                points = [(v.dxf.location.x, v.dxf.location.y) for v in entity.vertices]
+                points = [(self.getNumberInInch(v.dxf.location.x), self.getNumberInInch(v.dxf.location.y)) for v in entity.vertices]
                 if entity.is_closed and len(points) > 2:
                     self.polylines.append(points)
         
@@ -447,8 +456,9 @@ class FRCPostProcessor:
             # Extract circles from this layer
             for entity in msp.query('CIRCLE'):
                 if entity.dxf.layer == layer_name:
-                    center = (entity.dxf.center.x, entity.dxf.center.y)
-                    radius = entity.dxf.radius
+                    center = (self.getNumberInInch(entity.dxf.center.x), self.getNumberInInch(entity.dxf.center.y))
+                    radius = self.getNumberInInch(entity.dxf.radius)
+                    print(radius)
                     layer_circles.append({'center': center, 'radius': radius, 'diameter': radius * 2})
 
             # Extract polylines from this layer (same logic as single-layer)
@@ -494,15 +504,21 @@ class FRCPostProcessor:
 
     def _chain_entities_to_paths(self, lines, arcs, splines, unclosed_polylines=None):
         """
-        Chain individual LINE, ARC, SPLINE, and unclosed LWPOLYLINE entities into closed paths.
-        This handles DXF exports from Onshape and other CAD programs that don't use polylines.
-        """
+    Chain individual LINE, ARC, SPLINE, and unclosed LWPOLYLINE entities into closed paths.
+    """
         if unclosed_polylines is None:
             unclosed_polylines = []
 
+        # Convert unclosed polylines from raw entities to point lists
+        converted_polylines = []
+        for lwpoly in unclosed_polylines:
+            points = [(self.getNumberInInch(p[0]), self.getNumberInInch(p[1])) for p in lwpoly.get_points('xy')]
+            if len(points) >= 2:
+                converted_polylines.append(points)
+
         # First, try the graph-based approach for exact geometry
         print("  Attempting to connect segments into exact paths...")
-        exact_paths = self._connect_segments_graph_based(lines, arcs, splines, unclosed_polylines)
+        exact_paths = self._connect_segments_graph_based(lines, arcs, splines, converted_polylines)
         if exact_paths:
             return exact_paths
 
@@ -510,70 +526,55 @@ class FRCPostProcessor:
         print("  Falling back to linestring merge...")
         all_linestrings = []
 
-        # Add unclosed LWPOLYLINE entities
-        for lwpoly in unclosed_polylines:
-            points = [(p[0], p[1]) for p in lwpoly.get_points('xy')]
+        # Add unclosed LWPOLYLINE entities (already converted)
+        for points in converted_polylines:
             if len(points) >= 2:
                 all_linestrings.append(LineString(points))
 
-        # Add LINE entities
+        # Add LINE entities (already dicts)
         for line in lines:
-            start = (line.dxf.start.x, line.dxf.start.y)
-            end = (line.dxf.end.x, line.dxf.end.y)
-            all_linestrings.append(LineString([start, end]))
-        
-        # Add ARC entities (sample them into line segments)
+            all_linestrings.append(LineString([line['start'], line['end']]))
+
+        # Add ARC entities
         for arc in arcs:
             points = self._sample_arc(arc, num_points=20)
             if len(points) >= 2:
                 all_linestrings.append(LineString(points))
-        
-        # Add SPLINE entities (sample them into line segments)
+
+        # Add SPLINE entities
         for spline in splines:
             points = self._sample_spline(spline, num_points=30)
             if len(points) >= 2:
                 all_linestrings.append(LineString(points))
-        
+
         if not all_linestrings:
             return []
-        
+
         try:
-            # Merge connected line segments
             merged = linemerge(all_linestrings)
-            
-            # Extract closed paths
+
             closed_paths = []
-            tolerance = 0.1  # 0.1" tolerance for "almost closed"
-            
-            # Check if we got a single geometry or multiple
-            geoms_to_check = []
-            if hasattr(merged, 'geoms'):
-                geoms_to_check = list(merged.geoms)
-            else:
-                geoms_to_check = [merged]
-            
+            tolerance = 0.1
+
+            geoms_to_check = list(merged.geoms) if hasattr(merged, 'geoms') else [merged]
+
             for geom in geoms_to_check:
                 coords = list(geom.coords)
                 if len(coords) < 3:
                     continue
-                
-                # Check if path is closed or nearly closed
+
                 start = Point(coords[0])
                 end = Point(coords[-1])
                 distance = start.distance(end)
-                
                 is_closed = (coords[0] == coords[-1]) or distance < tolerance
-                
+
                 if is_closed:
-                    # Remove duplicate closing point if present
                     if coords[0] == coords[-1]:
                         coords = coords[:-1]
-                    
                     if len(coords) > 2:
                         closed_paths.append(coords)
                         print(f"  Found closed path with {len(coords)} points (gap: {distance:.4f}\")")
-            
-            # If we still didn't find closed paths, try creating convex hull (last resort)
+
             if not closed_paths and all_linestrings:
                 print("  Attempting to form polygon from all segments (APPROXIMATE)...")
                 try:
@@ -587,13 +588,14 @@ class FRCPostProcessor:
                             print(f"  ⚠️  This is approximate - concave features will be lost!")
                 except Exception as e:
                     print(f"  Could not create polygon: {e}")
-            
+
             return closed_paths
-            
+
         except Exception as e:
             print(f"Warning: Could not automatically chain entities into paths: {e}")
             return []
-    
+
+
     def _connect_segments_graph_based(self, lines, arcs, splines, unclosed_polylines=None):
         """
         Build a connectivity graph and find closed cycles.
@@ -602,133 +604,123 @@ class FRCPostProcessor:
         if unclosed_polylines is None:
             unclosed_polylines = []
 
-        # Build list of all segments with their endpoints
         segments = []
 
-        # Add unclosed LWPOLYLINE entities (treat as multi-point path segment)
-        for lwpoly in unclosed_polylines:
-            points = [(p[0], p[1]) for p in lwpoly.get_points('xy')]
+        # Add unclosed polylines (already converted to point lists)
+        for points in unclosed_polylines:
             if len(points) >= 2:
                 segments.append({'type': 'polyline', 'points': points, 'start': points[0], 'end': points[-1]})
 
-        # Add lines
+        # Add lines (already dicts)
         for line in lines:
-            start = (line.dxf.start.x, line.dxf.start.y)
-            end = (line.dxf.end.x, line.dxf.end.y)
-            points = [start, end]
-            segments.append({'type': 'line', 'points': points, 'start': start, 'end': end})
+            if isinstance(line, dict):
+                start = line['start']
+                end = line['end']
+            else:
+                start = (self.getNumberInInch(line.dxf.start.x), self.getNumberInInch(line.dxf.start.y))
+                end = (self.getNumberInInch(line.dxf.end.x), self.getNumberInInch(line.dxf.end.y))
+            segments.append({'type': 'line', 'points': [start, end], 'start': start, 'end': end})
 
-        # Add arcs (sampled)
+        # Add arcs (already dicts, sample them)
         for arc in arcs:
             points = self._sample_arc(arc, num_points=20)
             if len(points) >= 2:
                 segments.append({'type': 'arc', 'points': points, 'start': points[0], 'end': points[-1]})
 
-        # Add splines (sampled)
+        # Add splines (still raw entities)
         for spline in splines:
             points = self._sample_spline(spline, num_points=30)
             if len(points) >= 2:
                 segments.append({'type': 'spline', 'points': points, 'start': points[0], 'end': points[-1]})
-        
+
         if not segments:
             return []
-        
-        # Build adjacency graph
-        tolerance = 0.01  # 0.01" tolerance for matching endpoints
+
+        tolerance = 0.01
 
         def points_match(p1, p2, tol=tolerance):
             return self._distance_2d(p1, p2) < tol
-        
-        # Find which segments connect to which
-        graph = defaultdict(list)  # endpoint -> list of (segment_idx, is_start)
-        
+
+        graph = defaultdict(list)
+
         for idx, seg in enumerate(segments):
-            # Add connections for start point
             start_key = self._round_point(seg['start'], 3)
             graph[start_key].append((idx, True))
-            
-            # Add connections for end point
             end_key = self._round_point(seg['end'], 3)
             graph[end_key].append((idx, False))
-        
-        # Find closed cycles
+
         visited = set()
         closed_paths = []
-        
+
         for start_idx in range(len(segments)):
             if start_idx in visited:
                 continue
-            
-            # Try to build a path starting from this segment
+
             path_segments = []
             path_points = []
             current_idx = start_idx
             current_end = segments[start_idx]['end']
-            
-            # Add first segment
+
             path_segments.append(current_idx)
-            path_points.extend(segments[current_idx]['points'][:-1])  # Don't duplicate endpoints
+            path_points.extend(segments[current_idx]['points'][:-1])
             visited.add(current_idx)
-            
-            # Try to find next segments
+
             max_iterations = len(segments)
             for _ in range(max_iterations):
-                # Look for a segment that starts where we ended
                 end_key = self._round_point(current_end, 3)
-                
+
                 next_found = False
                 for next_idx, is_start in graph[end_key]:
                     if next_idx == current_idx or next_idx in path_segments:
                         continue
-                    
-                    # Found a connection!
+
                     seg = segments[next_idx]
-                    
+
                     if is_start:
-                        # Segment starts where we ended - add it forward
                         path_segments.append(next_idx)
                         path_points.extend(seg['points'][:-1])
                         current_end = seg['end']
                     else:
-                        # Segment ends where we ended - add it reversed
                         path_segments.append(next_idx)
                         reversed_points = list(reversed(seg['points']))
                         path_points.extend(reversed_points[:-1])
                         current_end = seg['start']
-                    
+
                     visited.add(next_idx)
                     next_found = True
                     break
-                
+
                 if not next_found:
                     break
-                
-                # Check if we've closed the loop
+
                 start_point = segments[start_idx]['start']
                 if points_match(current_end, start_point):
-                    # Closed path found!
                     if len(path_points) > 3:
                         closed_paths.append(path_points)
                         print(f"  Found exact closed path with {len(path_points)} points using {len(path_segments)} segments")
                     break
-        
+
         return closed_paths
-    
     def _round_point(self, point, decimals=3):
         """Round a point to create a hashable key for graph"""
         return (round(point[0], decimals), round(point[1], decimals))
     
     def _sample_arc(self, arc, num_points=20):
-        """Sample an ARC entity into a series of points"""
-        center = (arc.dxf.center.x, arc.dxf.center.y)
-        radius = arc.dxf.radius
-        start_angle = math.radians(arc.dxf.start_angle)
-        end_angle = math.radians(arc.dxf.end_angle)
-        
-        # Handle angle wrapping
+        """Sample an ARC entity (dict or ezdxf entity) into a series of points"""
+        if isinstance(arc, dict):
+            center = arc['center']
+            radius = arc['radius']
+            start_angle = math.radians(arc['start_angle'])
+            end_angle = math.radians(arc['end_angle'])
+        else:
+            center = (self.getNumberInInch(arc.dxf.center.x), self.getNumberInInch(arc.dxf.center.y))
+            radius = self.getNumberInInch(arc.dxf.radius)
+            start_angle = math.radians(arc.dxf.start_angle)
+            end_angle = math.radians(arc.dxf.end_angle)
+
         if end_angle < start_angle:
             end_angle += 2 * math.pi
-        
+
         points = []
         for i in range(num_points + 1):
             t = i / num_points
@@ -736,25 +728,23 @@ class FRCPostProcessor:
             x = center[0] + radius * math.cos(angle)
             y = center[1] + radius * math.sin(angle)
             points.append((x, y))
-        
-        return points
-    
+
+            return points
+
+
     def _sample_spline(self, spline, num_points=30):
         """Sample a SPLINE entity into a series of points"""
         try:
-            # Use ezdxf's built-in spline sampling
             points = []
             for point in spline.flattening(distance=0.01):
-                points.append((point[0], point[1]))
+                points.append((self.getNumberInInch(point[0]), self.getNumberInInch(point[1])))
             return points if points else []
         except:
-            # Fallback: use control points
             try:
-                control_points = [(p[0], p[1]) for p in spline.control_points]
+                control_points = [(self.getNumberInInch(p[0]), self.getNumberInInch(p[1])) for p in spline.control_points]
                 return control_points if len(control_points) > 1 else []
             except:
                 return []
-        
     def transform_coordinates(self, origin_corner: str, rotation_angle: int):
         """
         Transform all coordinates based on origin corner and rotation.
