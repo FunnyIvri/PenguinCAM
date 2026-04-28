@@ -504,7 +504,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const formData = new FormData();
-            formData.append("dxfunit", document.getElementById('dxfunit').value);
             formData.append('file', appState.uploadedFile);
             console.log('✅ FormData created with file:', appState.uploadedFile.name);
 
@@ -525,6 +524,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 formData.append('machine_id', machineSelect.value);
             }
 
+            formData.append('unit', document.getElementById('dxfunit').value);
+            console.log('📐 DXF units:', document.getElementById('dxfunit').value);
             const material = document.getElementById('material').value;
             formData.append('material', material);
             formData.append('tool_diameter', document.getElementById('toolDiameter').value);
@@ -1032,7 +1033,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     dxf.entities.forEach(entity => {
                         switch(entity.type) {
                             case 'CIRCLE':
-                                
                                 updateBounds(entity.center.x - entity.radius, entity.center.y - entity.radius);
                                 updateBounds(entity.center.x + entity.radius, entity.center.y + entity.radius);
                                 break;
@@ -1353,69 +1353,91 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('modeToggle').style.display = 'flex';
             switchMode('setup');
         }
-        
-        function createEntity(type, data) {
-            const unit = document.getElementById('dxfunit').value;
-            
-            if (type === 'CIRCLE') {
-                return {
-                    type: 'CIRCLE',
-                    center: { x: numberToInch(data.centerX,unit), y: numberToInch(data.centerY,unit) },
-                    radius: numberToInch(data.radius,unit),
-                    layer: data.layer || '0'
-                };
-            } else if (type === 'ARC') {
-                return {
-                    type: 'ARC',
-                    center: { x: numberToInch(data.centerX,unit), y: numberToInch(data.centerY,unit) },
-                    radius: numberToInch(data.radius,unit),
-                    startAngle: data.startAngle || 0,
-                    endAngle: data.endAngle || 360,
-                    layer: data.layer || '0'
-                };
-            } else if (type === 'LINE') {
-                return {
-                    type: 'LINE',
-                    vertices: [
-                        { x: numberToInch(data.x1,unit), y: numberToInch(data.y1,unit) },
-                        { x: numberToInch(data.x2,unit), y: numberToInch(data.y2,unit) }
-                    ],
-                    layer: data.layer || '0'
-                };
-            } else if (type === 'LWPOLYLINE') {
-                return {
-                    type: 'LWPOLYLINE',
-                    vertices: (data.vertices || []).map(v => ({
-                        x: numberToInch(v.x, unit),
-                        y: numberToInch(v.y, unit)
-                    })),
-                    closed: data.closed || false,
-                    shape: data.closed || false,
-                    layer: data.layer || '0'
-                };
-} else if (type === 'SPLINE') {
-    return {
-        type: 'SPLINE',
-        controlPoints: (data.controlPoints || []).map(p => ({
-            x: numberToInch(p.x, unit),
-            y: numberToInch(p.y, unit)
-        })),
-        layer: data.layer || '0'
-    };
-}
-            return null;
-        }
-        function numberToInch(num,unit) {
-            if(unit === "1"){
-                // inch
-                return num;
+        function numberToInch(number,unit){
+            if(unit === 'mm'){
+                return number / 25.4;
             }
-            if(unit === "4"){
-                // mm
-                return num / 25.4;
-            }
-            return num; 
+            return number; // Assume it's already in inches if not mm
         }
+    function createEntity(type, data) {
+        const unit = document.getElementById('dxfunit').value;
+
+        function convertPoint(p) {
+            return {
+                x: numberToInch(p.x, unit),
+                y: numberToInch(p.y, unit)
+            };
+        }
+
+        if (type === 'CIRCLE') {
+            return {
+                type: 'CIRCLE',
+                center: {
+                    x: numberToInch(data.centerX, unit),
+                    y: numberToInch(data.centerY, unit)
+                },
+                radius: numberToInch(data.radius, unit),
+                layer: data.layer || '0'
+            };
+        } 
+
+        else if (type === 'ARC') {
+            return {
+                type: 'ARC',
+                center: {
+                    x: numberToInch(data.centerX, unit),
+                    y: numberToInch(data.centerY, unit)
+                },
+                radius: numberToInch(data.radius, unit),
+                startAngle: data.startAngle || 0,
+                endAngle: data.endAngle || 360,
+                layer: data.layer || '0'
+            };
+        } 
+
+        else if (type === 'LINE') {
+            return {
+                type: 'LINE',
+                vertices: [
+                    {
+                        x: numberToInch(data.x1, unit),
+                        y: numberToInch(data.y1, unit)
+                    },
+                    {
+                        x: numberToInch(data.x2, unit),
+                        y: numberToInch(data.y2, unit)
+                    }
+                ],
+                layer: data.layer || '0'
+            };
+        } 
+
+        else if (type === 'LWPOLYLINE') {
+            return {
+                type: 'LWPOLYLINE',
+                vertices: (data.vertices || []).map(v => ({
+                    x: numberToInch(v.x, unit),
+                    y: numberToInch(v.y, unit),
+                    // keep bulge if exists (do NOT convert)
+                    ...(v.bulge !== undefined ? { bulge: v.bulge } : {})
+                })),
+                closed: data.closed || false,
+                shape: data.closed || false,
+                layer: data.layer || '0'
+            };
+        } 
+
+        else if (type === 'SPLINE') {
+            return {
+                type: 'SPLINE',
+                controlPoints: (data.controlPoints || []).map(p => convertPoint(p)),
+                layer: data.layer || '0'
+            };
+        }
+
+        return null;
+    }
+
         // Render 2D DXF setup view
         function renderDxfSetup() {
             if (!dxfGeometry || !dxfCtx2D) return;
@@ -1519,7 +1541,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     switch(entity.type) {
                         case 'CIRCLE':
                             const cPos = toCanvasCoords(entity.center.x, entity.center.y);
-                            ctx.arc(cPos.x,cPos.y, entity.radius * scale, 0, Math.PI * 2);
+                            ctx.arc(cPos.x, cPos.y, entity.radius * scale, 0, Math.PI * 2);
                             ctx.stroke();
                             break;
                             
@@ -1659,13 +1681,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (fitsInMachine) {
                 ctx.fillStyle = '#8B949E';
-                const unit = document.getElementById('dxfunit').value;
-                let dimensionsText = `${displayWidth.toFixed(2)}" × ${displayHeight.toFixed(2)}"`;
-                if(unit == "4"){
-                    dimensionsText = `${(displayWidth * 25.4).toFixed(1)} mm × ${(displayHeight * 25.4).toFixed(1)} mm`;
-                }
                 ctx.fillText(
-                    `${dimensionsText} (${rotationAngle}°)`,
+                    `${displayWidth.toFixed(2)}" × ${displayHeight.toFixed(2)}" (${rotationAngle}°)`,
                     width / 2,
                     20
                 );
@@ -2273,11 +2290,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const tubeHeightInput = parseFloat(document.getElementById('tubeHeight').value) || 1.0;
                 const dxfShort = dxfBounds ? Math.min(dxfBounds.width, dxfBounds.height) : Math.min(stockWidth, stockDepth);
                 const tubeLength = dxfBounds ? Math.max(dxfBounds.width, dxfBounds.height) : Math.max(stockWidth, stockDepth);
-                const unit = document.getElementById('dxfunit').value;
+
                 if (stockSizeDisplay && stockSizeValue) {
                     // Display as: width × height × length
-                    let stockSizeText = `${dxfShort.toFixed(0)}" × ${tubeHeightInput.toFixed(0)}" × ${tubeLength.toFixed(3)}"`;
-                    stockSizeValue.textContent = stockSizeText;
+                    stockSizeValue.textContent = `${dxfShort.toFixed(0)}" × ${tubeHeightInput.toFixed(0)}" × ${tubeLength.toFixed(3)}"`;
                     stockSizeDisplay.style.display = 'flex';
                 }
             } else {
@@ -2310,12 +2326,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const fullStockDepth = dxfHeight + (cutsOutsideY ? 2 * toolDiameter : 0);
 
                 if (stockSizeDisplay && stockSizeValue) {
-                    let stockSizeText=  `${fullStockWidth.toFixed(3)}" × ${fullStockDepth.toFixed(3)}"`
-                    
-                    if(unit == "4"){
-                        stockSizeText = `${(fullStockWidth * 25.4).toFixed(1)} mm × ${(fullStockDepth * 25.4).toFixed(1)} mm`
-                    }
-                    stockSizeValue.textContent = stockSizeText;
+                    stockSizeValue.textContent = `${fullStockWidth.toFixed(3)}" × ${fullStockDepth.toFixed(3)}"`;
                     stockSizeDisplay.style.display = 'flex';
                 }
             }

@@ -17,7 +17,7 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import List, Tuple, Optional, Dict, Any
-from ezdxf.layouts.layout import Modelspace
+
 # Third-party
 import ezdxf
 
@@ -353,13 +353,12 @@ class FRCPostProcessor:
         else:
             return int_part + frac_value
 
-    def load_dxf(self, filename: str, dxf_unit: str = "4"):
+    def load_dxf(self, filename: str, unit: str):
         """Load DXF file and extract geometry, organized by layer if multi-layer DXF"""
         print(f"Loading {filename}...")
-        self.dxf_unit = int(dxf_unit)
         doc = ezdxf.readfile(filename)
         msp = doc.modelspace()
-
+        self.unit = unit
         # Check for multi-layer structure
         layers_with_depths = {}
         for layer in doc.layers:
@@ -373,31 +372,26 @@ class FRCPostProcessor:
         else:
             print("Processing as single-layer DXF")
             self._load_singlelayer_dxf(msp)
-    def getNumberInInch(self, number : float) -> float:
-        if self.dxf_unit == 1:  # Inch
-            print("inch")
-            return number
-        elif self.dxf_unit == 4:  # MM
-            return number / 25.4
-        else: return number
-
-    def _load_singlelayer_dxf(self, msp : Modelspace):
+    def getNumberInInch(self, num : float) -> float:
+        if self.unit == "mm":
+            return num / 25.4
+        else:
+            return num
+    
+    def _load_singlelayer_dxf(self, msp):
         """Load geometry from single-layer DXF (existing logic)"""
-        self.layer_data = None  # Mark as single-layer
-
+        self.layer_data = None  # Mark as single-layer  
         # Extract circles (holes)
         self.circles = []
         for entity in msp.query('CIRCLE'):
-            center = (self.getNumberInInch(entity.dxf.center.x), self.getNumberInInch(entity.dxf.center.y))
+            center = (self.getNumberInInch(entity.dxf.center.x), 
+                      self.getNumberInInch(entity.dxf.center.y))
             radius = self.getNumberInInch(entity.dxf.radius)
-            print(radius)
-            self.circles.append({'center': center, 'radius': radius, 'diameter': radius * 2})
-
+            self.circles.append({'center': center, 'radius': radius, 'diameter': radius * 2})   
         # Initialize geometry lists for transform_coordinates compatibility
         self.lines = []  # Individual lines (converted to polylines)
         self.arcs = []   # Individual arcs (converted to polylines)
-        self.splines = []  # Individual splines (converted to polylines)
-
+        self.splines = []  # Individual splines (converted to polylines)    
         # Extract polylines and lines (boundaries/pockets)
         self.polylines = []
         
@@ -410,29 +404,27 @@ class FRCPostProcessor:
         # Method 2: Look for POLYLINE entities
         for entity in msp.query('POLYLINE'):
             if entity.is_2d_polyline:
-                points = [(self.getNumberInInch(v.dxf.location.x), self.getNumberInInch(v.dxf.location.y)) for v in entity.vertices]
+                points = [(self.getNumberInInch(v.dxf.location.x), 
+                          self.getNumberInInch(v.dxf.location.y)) for v in entity.vertices]
                 if entity.is_closed and len(points) > 2:
                     self.polylines.append(points)
         
         # Method 3: Collect individual LINE, ARC, SPLINE entities and try to form closed paths
         # This is needed for Onshape exports which use individual entities
-        lines = list(msp.query('LINE'))
-        arcs = list(msp.query('ARC'))
-        splines = list(msp.query('SPLINE'))
-
+        lines = list(msp.query('LINE'))  # raw entities, not dicts
+        arcs = list(msp.query('ARC'))    # raw entities, not dicts
+        splines = list(msp.query('SPLINE')) 
         # Also collect unclosed LWPOLYLINEs - they may be part of a perimeter that needs stitching
         unclosed_lwpolylines = []
         for entity in msp.query('LWPOLYLINE'):
             if not entity.closed and len(list(entity.get_points('xy'))) > 1:
-                unclosed_lwpolylines.append(entity)
-
+                unclosed_lwpolylines.append(entity) 
         if lines or arcs or splines or unclosed_lwpolylines:
             print(f"Found {len(lines)} lines, {len(arcs)} arcs, {len(splines)} splines, {len(unclosed_lwpolylines)} unclosed polylines - attempting to form closed paths...")
             closed_paths = self._chain_entities_to_paths(lines, arcs, splines, unclosed_lwpolylines)
             self.polylines.extend(closed_paths)
         
         print(f"Found {len(self.circles)} circles and {len(self.polylines)} closed paths")
-
     def _load_multilayer_dxf(self, doc, msp, layers_with_depths):
         """Load geometry from multi-layer DXF, organized by depth"""
         # Initialize geometry lists for transform_coordinates compatibility
@@ -456,9 +448,8 @@ class FRCPostProcessor:
             # Extract circles from this layer
             for entity in msp.query('CIRCLE'):
                 if entity.dxf.layer == layer_name:
-                    center = (self.getNumberInInch(entity.dxf.center.x), self.getNumberInInch(entity.dxf.center.y))
-                    radius = self.getNumberInInch(entity.dxf.radius)
-                    print(radius)
+                    center = (entity.dxf.center.x, entity.dxf.center.y)
+                    radius = self.getNumberInInch(entity.dxf.radius, unit)
                     layer_circles.append({'center': center, 'radius': radius, 'diameter': radius * 2})
 
             # Extract polylines from this layer (same logic as single-layer)
@@ -504,8 +495,8 @@ class FRCPostProcessor:
 
     def _chain_entities_to_paths(self, lines, arcs, splines, unclosed_polylines=None):
         """
-    Chain individual LINE, ARC, SPLINE, and unclosed LWPOLYLINE entities into closed paths.
-    """
+        Chain individual LINE, ARC, SPLINE, and unclosed LWPOLYLINE entities into closed paths.
+        """
         if unclosed_polylines is None:
             unclosed_polylines = []
 
@@ -594,8 +585,6 @@ class FRCPostProcessor:
         except Exception as e:
             print(f"Warning: Could not automatically chain entities into paths: {e}")
             return []
-
-
     def _connect_segments_graph_based(self, lines, arcs, splines, unclosed_polylines=None):
         """
         Build a connectivity graph and find closed cycles.
@@ -611,23 +600,39 @@ class FRCPostProcessor:
             if len(points) >= 2:
                 segments.append({'type': 'polyline', 'points': points, 'start': points[0], 'end': points[-1]})
 
-        # Add lines (already dicts)
+        # Add lines (raw ezdxf LINE entities)
         for line in lines:
-            if isinstance(line, dict):
-                start = line['start']
-                end = line['end']
-            else:
-                start = (self.getNumberInInch(line.dxf.start.x), self.getNumberInInch(line.dxf.start.y))
-                end = (self.getNumberInInch(line.dxf.end.x), self.getNumberInInch(line.dxf.end.y))
-            segments.append({'type': 'line', 'points': [start, end], 'start': start, 'end': end})
+            # Get start and end points from ezdxf LINE entity
+            start = (self.getNumberInInch(line.dxf.start.x), self.getNumberInInch(line.dxf.start.y))
+            end = (self.getNumberInInch(line.dxf.end.x), self.getNumberInInch(line.dxf.end.y))
+            points = [start, end]
+            segments.append({'type': 'line', 'points': points, 'start': start, 'end': end})
 
-        # Add arcs (already dicts, sample them)
+        # Add arcs (raw ezdxf ARC entities)
         for arc in arcs:
-            points = self._sample_arc(arc, num_points=20)
+            # Get center, radius, angles from ezdxf ARC entity
+            center = (self.getNumberInInch(arc.dxf.center.x), self.getNumberInInch(arc.dxf.center.y))
+            radius = self.getNumberInInch(arc.dxf.radius)
+            start_angle = math.radians(arc.dxf.start_angle)
+            end_angle = math.radians(arc.dxf.end_angle)
+
+            # Sample the arc into points
+            points = []
+            num_points = 20
+            if end_angle < start_angle:
+                end_angle += 2 * math.pi
+
+            for i in range(num_points + 1):
+                t = i / num_points
+                angle = start_angle + t * (end_angle - start_angle)
+                x = center[0] + radius * math.cos(angle)
+                y = center[1] + radius * math.sin(angle)
+                points.append((x, y))
+
             if len(points) >= 2:
                 segments.append({'type': 'arc', 'points': points, 'start': points[0], 'end': points[-1]})
 
-        # Add splines (still raw entities)
+        # Add splines (raw ezdxf SPLINE entities)
         for spline in splines:
             points = self._sample_spline(spline, num_points=30)
             if len(points) >= 2:
@@ -655,7 +660,7 @@ class FRCPostProcessor:
         for start_idx in range(len(segments)):
             if start_idx in visited:
                 continue
-
+            
             path_segments = []
             path_points = []
             current_idx = start_idx
@@ -673,7 +678,7 @@ class FRCPostProcessor:
                 for next_idx, is_start in graph[end_key]:
                     if next_idx == current_idx or next_idx in path_segments:
                         continue
-
+                    
                     seg = segments[next_idx]
 
                     if is_start:
@@ -689,17 +694,17 @@ class FRCPostProcessor:
                     visited.add(next_idx)
                     next_found = True
                     break
-
+                
                 if not next_found:
                     break
-
+                
                 start_point = segments[start_idx]['start']
                 if points_match(current_end, start_point):
                     if len(path_points) > 3:
                         closed_paths.append(path_points)
                         print(f"  Found exact closed path with {len(path_points)} points using {len(path_segments)} segments")
                     break
-
+                
         return closed_paths
     def _round_point(self, point, decimals=3):
         """Round a point to create a hashable key for graph"""
@@ -729,8 +734,7 @@ class FRCPostProcessor:
             y = center[1] + radius * math.sin(angle)
             points.append((x, y))
 
-            return points
-
+        return points
 
     def _sample_spline(self, spline, num_points=30):
         """Sample a SPLINE entity into a series of points"""
@@ -745,6 +749,7 @@ class FRCPostProcessor:
                 return control_points if len(control_points) > 1 else []
             except:
                 return []
+
     def transform_coordinates(self, origin_corner: str, rotation_angle: int):
         """
         Transform all coordinates based on origin corner and rotation.
