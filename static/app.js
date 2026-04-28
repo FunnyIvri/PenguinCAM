@@ -528,20 +528,21 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('📐 DXF units:', document.getElementById('dxfunit').value);
             const material = document.getElementById('material').value;
             formData.append('material', material);
-            formData.append('tool_diameter', document.getElementById('toolDiameter').value);
+            formData.append('tool_diameter', numberToInch(Number(document.getElementById('toolDiameter').value), document.getElementById('toolDiameterUnit').value)); // Tool diameter in inches
             formData.append('origin_corner', 'bottom-left'); // Always bottom-left
 
             // Add material-specific parameters
             if (material === 'aluminum_tube') {
                 // Tube-specific parameters
-                formData.append('thickness', document.getElementById('thickness').value); // Tube wall thickness
-                formData.append('tube_height', document.getElementById('tubeHeight').value);
+                formData.append('thickness', numberToInch(Number(document.getElementById('thickness').value),document.getElementById('thicknessUnit').value)); // Material thickness converted to inches                
+                formData.append('tube_height', numberToInch(Number(document.getElementById('tubeHeight').value), document.getElementById('tubeHeightUnit').value));
                 formData.append('square_end', document.getElementById('squareEnd').checked ? '1' : '0');
                 formData.append('cut_to_length', document.getElementById('cutToLength').checked ? '1' : '0');
             } else {
                 // Standard parameters
-                formData.append('thickness', document.getElementById('thickness').value);
-                formData.append('tab_spacing', document.getElementById('tabSpacing').value);
+                
+                formData.append('thickness', numberToInch(Number(document.getElementById('thickness').value),document.getElementById('thicknessUnit').value)); // Material thickness converted to inches
+                formData.append('tab_spacing', numberToInch(Number(document.getElementById('tabSpacing').value),document.getElementById('tabSpacingUnit').value)); // Tab spacing converted to inches
             }
             formData.append('rotation', rotationAngle); // Add rotation angle
             if (appState.suggestedFilename) {
@@ -1355,7 +1356,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         function numberToInch(number,unit){
             if(unit === 'mm'){
-                return number / 25.4;
+                return (number / 25.4); // Convert mm to inches and round to 4 decimal places
             }
             return number; // Assume it's already in inches if not mm
         }
@@ -2226,7 +2227,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Get actual material thickness for visualization
             const material = document.getElementById('material').value;
             const isAluminumTube = (material === 'aluminum_tube');
-            const materialThickness = parseFloat(document.getElementById('thickness').value);
+            const materialThickness = parseFloat(numberToInch);
 
             // For tube mode, use tube height as stock height instead of wall thickness
             const stockHeightValue = isAluminumTube ?
@@ -2267,7 +2268,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let stockCenterX, stockCenterZ; // Center position for stock box
 
             // Calculate and display stock size
-            const toolDiameter = parseFloat(document.getElementById('toolDiameter').value) || 0.157;
+            const toolDiameter = parseFloat(numberToInch(document.getElementById('toolDiameter').value, document.getElementById('toolDiameterUnit').value)) || 0.157;
             const stockSizeDisplay = document.getElementById('stockSizeDisplay');
             const stockSizeValue = document.getElementById('stockSizeValue');
 
